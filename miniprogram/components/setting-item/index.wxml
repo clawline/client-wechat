@@ -1,0 +1,18 @@
+<view class="setting-row" bindtap="handleTap" hover-class="setting-row--pressed">
+  <view class="setting-meta">
+    <view class="setting-icon">
+      <oc-icon name="{{item.icon}}" tone="dark" size="36rpx" />
+    </view>
+    <text class="setting-label">{{item.label}}</text>
+  </view>
+
+  <view class="setting-value">
+    <text wx:if="{{item.value}}" class="setting-value__text">{{item.value}}</text>
+
+    <view wx:if="{{item.hasToggle}}" class="setting-switch {{item.active ? 'setting-switch--active' : ''}}">
+      <view class="setting-switch__thumb {{item.active ? 'setting-switch__thumb--active' : ''}}"></view>
+    </view>
+
+    <oc-icon wx:else name="chevron-right" tone="dark" size="28rpx" />
+  </view>
+</view>

@@ -1,0 +1,50 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen screen--onboarding" style="padding-top: {{contentTopInset}}px;">
+    <!-- Logo + Title -->
+    <view class="onboarding-top">
+      <view class="brand-mark">
+        <text class="brand-mark__glyph">$</text>
+      </view>
+      <text class="onboarding-title">OpenClaw</text>
+      <text class="onboarding-subtitle">Intelligent development companion</text>
+    </view>
+
+    <!-- Feature Carousel -->
+    <swiper
+      class="onboarding-carousel"
+      current="{{activeSlide}}"
+      bindchange="handleSwiperChange"
+      circular
+      duration="{{300}}"
+    >
+      <swiper-item wx:for="{{slides}}" wx:key="title">
+        <view class="slide-card">
+          <view class="slide-icon" style="background: {{item.color}};">
+            <text class="slide-icon__emoji">{{item.emoji}}</text>
+          </view>
+          <text class="slide-card__title">{{item.title}}</text>
+          <text class="slide-card__desc">{{item.desc}}</text>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <!-- Dots -->
+    <view class="onboarding-dots">
+      <view
+        wx:for="{{slides}}"
+        wx:key="title"
+        class="onboarding-dot {{activeSlide === index ? 'onboarding-dot--active' : ''}}"
+        data-index="{{index}}"
+        bindtap="handleDotTap"
+      ></view>
+    </view>
+
+    <!-- Actions -->
+    <view class="onboarding-actions">
+      <view class="primary-button" bindtap="handleStart" hover-class="button-pressed">
+        <text class="primary-button__label">Get Started</text>
+        <oc-icon name="arrow-right" tone="white" size="32rpx" />
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "bottom-nav": "../../components/bottom-nav/index",
+    "chat-item": "../../components/chat-item/index",
+    "oc-icon": "../../components/icon/index"
+  }
+}

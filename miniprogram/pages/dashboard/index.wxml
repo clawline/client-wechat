@@ -1,0 +1,84 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen">
+    <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
+      <view class="dashboard-body" style="padding-top: {{contentTopInset}}px;">
+        <view class="dashboard-header">
+          <text class="screen-title">Resources</text>
+          <view wx:if="{{activeServerName}}" class="live-pill {{wsStatus === 'connected' ? '' : 'live-pill--offline'}}">
+            {{wsStatus === 'connected' ? 'Live' : 'Offline'}}
+          </view>
+        </view>
+
+        <glass-card extraClass="dashboard-card">
+          <view class="section-head">
+            <view class="section-head__title">
+              <oc-icon name="server" tone="green" size="30rpx" />
+              <text>Channel Status</text>
+            </view>
+          </view>
+
+          <view wx:if="{{channelStatus}}" class="metric-grid">
+            <view class="metric-card">
+              <text class="metric-card__label">Mode</text>
+              <text class="metric-card__value">{{channelStatus.mode}}</text>
+            </view>
+            <view class="metric-card">
+              <text class="metric-card__label">Running</text>
+              <text class="metric-card__value">{{channelStatus.running ? 'Yes' : 'No'}}</text>
+            </view>
+            <view class="metric-card">
+              <text class="metric-card__label">Active Chats</text>
+              <text class="metric-card__value">{{channelStatus.connectedChatCount}}</text>
+            </view>
+            <view class="metric-card">
+              <text class="metric-card__label">Connections</text>
+              <text class="metric-card__value">{{channelStatus.connectedSocketCount}}</text>
+            </view>
+          </view>
+
+          <view wx:elif="{{activeServerName}}" class="dashboard-empty">
+            <text class="dashboard-empty__text">{{wsStatus === 'connected' ? 'Loading status…' : 'Connecting…'}}</text>
+          </view>
+
+          <view wx:else class="dashboard-empty">
+            <text class="dashboard-empty__text">Connect a server to view status</text>
+          </view>
+        </glass-card>
+
+        <glass-card wx:if="{{channelStatus}}" extraClass="dashboard-card">
+          <view class="section-head">
+            <view class="section-head__title">
+              <oc-icon name="activity" tone="green" size="30rpx" />
+              <text>Connection Details</text>
+            </view>
+          </view>
+          <view class="detail-list">
+            <view class="detail-row">
+              <text class="detail-label">Server</text>
+              <text class="detail-value">{{activeServerName}}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">Port</text>
+              <text class="detail-value">{{channelStatus.port}}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">Path</text>
+              <text class="detail-value">{{channelStatus.path}}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">This Chat</text>
+              <text class="detail-value">{{channelStatus.currentChatConnectionCount}} conn</text>
+            </view>
+          </view>
+        </glass-card>
+      </view>
+    </scroll-view>
+  </view>
+
+  <bottom-nav
+    items="{{navItems}}"
+    currentScreen="{{currentScreen}}"
+    safeAreaBottom="{{safeAreaBottom}}"
+    bindnavigate="handleNavigate"
+  />
+</view>

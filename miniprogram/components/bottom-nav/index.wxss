@@ -1,0 +1,67 @@
+@import "../../theme/tokens.wxss";
+
+.nav-wrap {
+  position: absolute;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 24rpx;
+  z-index: 30;
+}
+
+.nav-surface {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 28rpx;
+  border-radius: 64rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.82);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.68));
+  box-shadow: var(--shadow-floating);
+}
+
+.nav-item {
+  position: relative;
+  width: 92rpx;
+  height: 84rpx;
+  border-radius: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.nav-item--pressed {
+  transform: scale(0.92);
+  opacity: 0.92;
+}
+
+.nav-indicator {
+  position: absolute;
+  bottom: 4rpx;
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: var(--color-primary);
+}
+
+.nav-badge {
+  position: absolute;
+  top: 4rpx;
+  right: 6rpx;
+  min-width: 34rpx;
+  height: 34rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: #E15B64;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 18rpx rgba(225, 91, 100, 0.2);
+}
+
+.nav-badge__text {
+  font-size: 18rpx;
+  line-height: 1;
+  font-weight: 500;
+}

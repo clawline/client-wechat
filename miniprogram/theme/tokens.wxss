@@ -1,0 +1,50 @@
+:root,
+page {
+  --color-surface: #F8FAFB;
+  --color-card: #FFFFFF;
+  --color-card-glass: rgba(255, 255, 255, 0.72);
+  --color-card-glass-strong: rgba(255, 255, 255, 0.82);
+  --color-primary: #67B88B;
+  --color-primary-deep: #4A9A70;
+  --color-text-primary: #2D3436;
+  --color-text-secondary: #5B6669;
+  --color-text-muted: #92A0A4;
+  --color-border: #EDF2F0;
+  --color-border-strong: #DCE7E3;
+  --color-blue: #5B8DEF;
+  --color-purple: #8B6DFF;
+  --color-red: #E15B64;
+  --color-orange: #F59E0B;
+  --radius-16: 16rpx;
+  --radius-20: 20rpx;
+  --radius-24: 24rpx;
+  --radius-32: 32rpx;
+  --radius-40: 40rpx;
+  --radius-pill: 999rpx;
+  --shadow-card: 0 18rpx 40rpx rgba(33, 52, 44, 0.08);
+  --shadow-floating: 0 26rpx 80rpx rgba(33, 52, 44, 0.14);
+  --shadow-primary: 0 20rpx 52rpx rgba(103, 184, 139, 0.28);
+}
+
+/* Dark mode overrides — applied via .dark-mode class on shell-page */
+.dark-mode {
+  --color-surface: #1a1b2e;
+  --color-card: #232437;
+  --color-card-glass: rgba(35, 36, 55, 0.72);
+  --color-card-glass-strong: rgba(35, 36, 55, 0.82);
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #a0aec0;
+  --color-text-muted: #718096;
+  --color-border: #2d3748;
+  --color-border-strong: #4a5568;
+  --shadow-card: 0 18rpx 40rpx rgba(0, 0, 0, 0.2);
+  --shadow-floating: 0 26rpx 80rpx rgba(0, 0, 0, 0.3);
+  --shadow-primary: 0 20rpx 52rpx rgba(103, 184, 139, 0.18);
+}
+
+.dark-mode page,
+.dark-mode .screen,
+.dark-mode .shell-page {
+  background-color: #1a1b2e;
+  color: #e2e8f0;
+}

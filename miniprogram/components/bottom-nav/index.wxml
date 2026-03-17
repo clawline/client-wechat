@@ -1,0 +1,22 @@
+<view class="nav-wrap" style="padding-bottom: {{safeAreaBottom}}px;">
+  <view class="nav-surface">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="nav-item"
+      data-screen="{{item.id}}"
+      bindtap="handleTap"
+      hover-class="nav-item--pressed"
+    >
+      <oc-icon
+        name="{{item.icon}}"
+        tone="{{currentScreen === item.id ? 'green' : 'dark'}}"
+        size="48rpx"
+      />
+      <view wx:if="{{item.unreadCount > 0}}" class="nav-badge">
+        <text class="nav-badge__text">{{item.unreadCount > 9 ? '9+' : item.unreadCount}}</text>
+      </view>
+      <view wx:if="{{currentScreen === item.id}}" class="nav-indicator"></view>
+    </view>
+  </view>
+</view>

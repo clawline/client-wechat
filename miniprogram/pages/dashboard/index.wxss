@@ -1,0 +1,47 @@
+@import "../../theme/page-shell.wxss";
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.live-pill--offline {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #D97706 !important;
+}
+
+.dashboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+}
+
+.dashboard-empty__text {
+  font-size: 28rpx;
+  color: var(--color-text-muted);
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 28rpx;
+}
+
+.detail-label {
+  color: var(--color-text-muted);
+}
+
+.detail-value {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}

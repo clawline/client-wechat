@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "oc-icon": "../icon/index"
+  }
+}

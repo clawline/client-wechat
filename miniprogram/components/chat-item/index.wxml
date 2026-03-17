@@ -1,0 +1,34 @@
+<view
+  class="chat-item"
+  bindtap="handleTap"
+  hover-class="chat-item--pressed"
+  style="animation-delay: {{delay}}ms;"
+>
+  <view class="chat-avatar">
+    <block wx:if="{{chat.isGroup}}">
+      <view class="chat-avatar__group">
+        <image class="chat-avatar__group-first" src="{{chat.avatars[0]}}" mode="aspectFill" />
+        <image class="chat-avatar__group-second" src="{{chat.avatars[1]}}" mode="aspectFill" />
+        <view class="chat-avatar__group-count">+{{chat.avatars.length - 1}}</view>
+      </view>
+    </block>
+    <block wx:else>
+      <image class="chat-avatar__single" src="{{chat.avatar}}" mode="aspectFill" />
+      <view wx:if="{{chat.online}}" class="chat-avatar__status"></view>
+    </block>
+  </view>
+
+  <view class="chat-body">
+    <view class="chat-head">
+      <view class="chat-title">
+        <text class="chat-name">{{chat.name}}</text>
+        <text wx:if="{{chat.detail}}" class="chat-detail">{{chat.detail}}</text>
+      </view>
+      <text wx:if="{{chat.badge}}" class="chat-badge">{{chat.badge}}</text>
+      <text wx:elif="{{chat.time}}" class="chat-time">{{chat.time}}</text>
+    </view>
+    <text class="chat-message">{{chat.message}}</text>
+  </view>
+
+  <view wx:if="{{chat.unread > 0}}" class="chat-unread">{{chat.unread}}</view>
+</view>

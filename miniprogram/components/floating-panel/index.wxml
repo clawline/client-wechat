@@ -1,0 +1,6 @@
+<view class="floating-root {{visible ? 'floating-root--visible' : ''}}">
+  <view class="floating-mask" bindtap="handleClose"></view>
+  <view class="floating-panel {{extraClass}}" catchtap="noop">
+    <slot />
+  </view>
+</view>

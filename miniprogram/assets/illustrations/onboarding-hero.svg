@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 560">
+  <defs>
+    <linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8F7EF"/>
+      <stop offset="100%" stop-color="#D5EEE3"/>
+    </linearGradient>
+    <linearGradient id="b" x1="10%" y1="10%" x2="100%" y2="90%">
+      <stop offset="0%" stop-color="#67B88B"/>
+      <stop offset="100%" stop-color="#4A9A70"/>
+    </linearGradient>
+    <linearGradient id="c" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8FD9B0"/>
+      <stop offset="100%" stop-color="#66A989"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="560" rx="88" fill="url(#a)"/>
+  <circle cx="160" cy="164" r="120" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="406" cy="164" r="84" fill="rgba(255,255,255,0.38)"/>
+  <rect x="128" y="124" width="306" height="240" rx="48" fill="url(#b)" opacity="0.96"/>
+  <rect x="164" y="160" width="234" height="36" rx="18" fill="rgba(255,255,255,0.18)"/>
+  <rect x="164" y="220" width="170" height="28" rx="14" fill="rgba(255,255,255,0.18)"/>
+  <rect x="164" y="270" width="204" height="28" rx="14" fill="rgba(255,255,255,0.18)"/>
+  <path d="M252 90c14 26 20 49 20 70" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" opacity="0.64"/>
+  <path d="M310 102c-10 22-14 40-14 58" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" opacity="0.48"/>
+  <circle cx="420" cy="402" r="70" fill="url(#c)"/>
+  <circle cx="152" cy="410" r="54" fill="rgba(255,255,255,0.42)"/>
+  <rect x="122" y="386" width="262" height="74" rx="37" fill="rgba(255,255,255,0.72)"/>
+  <text x="153" y="432" font-size="40" font-family="SF Pro Display, PingFang SC, sans-serif" fill="#2D3436" font-weight="700">OpenClaw</text>
+  <circle cx="430" cy="402" r="30" fill="rgba(255,255,255,0.82)"/>
+  <path d="M430 384v36M439 389h-18" stroke="#4A9A70" stroke-width="10" stroke-linecap="round"/>
+</svg>

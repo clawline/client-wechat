@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* highlight.js inline theme (Catppuccin Mocha) */
+.hljs-keyword { color: #cba6f7; }
+.hljs-string { color: #a6e3a1; }
+.hljs-number { color: #fab387; }
+.hljs-comment { color: #6c7086; font-style: italic; }
+.hljs-function { color: #89b4fa; }
+.hljs-title { color: #89b4fa; }
+.hljs-built_in { color: #f38ba8; }
+.hljs-type { color: #f9e2af; }
+.hljs-attr { color: #89dceb; }
+.hljs-variable { color: #cdd6f4; }
+.hljs-operator { color: #94e2d5; }
+.hljs-punctuation { color: #9399b2; }
+.hljs-meta { color: #f5c2e7; }
+.hljs-tag { color: #89b4fa; }
+.hljs-name { color: #89b4fa; }
+.hljs-attribute { color: #f9e2af; }
+
+/* Light mode (default) */
+:root {
+  --bg-surface: #F8FAFB;
+  --bg-card: #FFFFFF;
+  --text-primary: #2D3436;
+  --text-secondary: #5B6669;
+  --text-muted: #92A0A4;
+  --border-color: #EDF2F0;
+  --primary: #67B88B;
+}
+
+/* Dark mode */
+.dark {
+  --bg-surface: #1a1b2e;
+  --bg-card: #232437;
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-muted: #64748b;
+  --border-color: #2d3748;
+  --primary: #67B88B;
+}
+
+.dark body,
+.dark #root {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Show thin scrollbar on desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  }
+}
+
+/* Prevent pull-to-refresh on mobile */
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Prevent iOS input zoom */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Scrollbar hide for Firefox */
+* {
+  scrollbar-width: none;
+}

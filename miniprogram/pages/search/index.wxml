@@ -1,0 +1,74 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen">
+    <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
+      <view class="search-body" style="padding-top: {{contentTopInset}}px;">
+        <text class="screen-title">Search</text>
+
+        <view class="search-field search-field--lg">
+          <oc-icon name="search" tone="dark" size="34rpx" extraClass="search-field__icon" />
+          <input
+            class="search-field__input"
+            value="{{searchScreenQuery}}"
+            focus="{{true}}"
+            placeholder="Search messages..."
+            placeholder-style="color: rgba(45, 52, 54, 0.35);"
+            bindinput="handleSearchInput"
+          />
+        </view>
+
+        <!-- Search Results -->
+        <block wx:if="{{hasSearched}}">
+          <view wx:if="{{searchResults.length}}" class="search-results">
+            <view
+              wx:for="{{searchResults}}"
+              wx:key="id"
+              class="search-result-item"
+            >
+              <view class="search-result-header">
+                <text class="search-result-sender">{{item.sender}}</text>
+                <text wx:if="{{item.formattedTime}}" class="search-result-time">{{item.formattedTime}}</text>
+              </view>
+              <text class="search-result-text">{{item.text}}</text>
+            </view>
+          </view>
+          <view wx:else class="search-empty">
+            <text class="search-empty__text">No messages found</text>
+          </view>
+          <text class="search-result-count">{{searchResultCount}} result{{searchResultCount !== 1 ? 's' : ''}}</text>
+        </block>
+
+        <!-- Initial state: quick filters -->
+        <block wx:else>
+          <view class="search-section">
+            <text class="section-caption">Quick Filters</text>
+            <view class="search-filters">
+              <view
+                wx:for="{{quickFilters}}"
+                wx:key="id"
+                class="search-filter"
+                data-label="{{item.label}}"
+                bindtap="handleSearchShortcut"
+                hover-class="button-pressed"
+              >
+                <oc-icon name="{{item.icon}}" tone="{{item.tone}}" size="24rpx" />
+                <text>{{item.label}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="search-empty-hero">
+            <oc-icon name="search" tone="dark" size="80rpx" />
+            <text class="search-empty-hero__text">Search across your conversations</text>
+          </view>
+        </block>
+      </view>
+    </scroll-view>
+  </view>
+
+  <bottom-nav
+    items="{{navItems}}"
+    currentScreen="{{currentScreen}}"
+    safeAreaBottom="{{safeAreaBottom}}"
+    bindnavigate="handleNavigate"
+  />
+</view>

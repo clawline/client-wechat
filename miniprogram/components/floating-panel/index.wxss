@@ -1,0 +1,44 @@
+@import "../../theme/tokens.wxss";
+
+.floating-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.floating-root--visible {
+  pointer-events: auto;
+}
+
+.floating-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 250, 251, 0.42);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.floating-root--visible .floating-mask {
+  opacity: 1;
+}
+
+.floating-panel {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 152rpx;
+  padding: 18rpx;
+  border-radius: var(--radius-24);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.74));
+  border: 2rpx solid rgba(255, 255, 255, 0.84);
+  box-shadow: var(--shadow-floating);
+  transform: translateY(28rpx) scale(0.96);
+  opacity: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.floating-root--visible .floating-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}

@@ -1,0 +1,25 @@
+.emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 8rpx;
+}
+
+.emoji-cell {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-cell--pressed {
+  background: rgba(255, 255, 255, 0.58);
+  transform: scale(0.9);
+}
+
+.emoji-text {
+  font-size: 42rpx;
+}

@@ -1,0 +1,144 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen">
+    <view class="screen-header screen-header--chat" style="padding-top: {{navBarPaddingTop}}px; min-height: {{navBarHeight}}px;">
+      <view class="nav-side-slot" style="width: {{navSideSlotWidth}}px;">
+        <view class="header-icon-button" bindtap="handleBack" hover-class="button-pressed">
+          <oc-icon name="chevron-left" tone="dark" size="42rpx" />
+        </view>
+      </view>
+      <view class="screen-header__center">
+        <text class="screen-header__title">Connect Server</text>
+      </view>
+      <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
+    </view>
+
+    <scroll-view class="screen-scroll" scroll-y>
+      <view class="pairing-body">
+        <view class="pairing-hero">
+          <view class="pairing-chip">
+            <oc-icon name="server" tone="green" size="28rpx" />
+            <text>OpenClaw Connect</text>
+          </view>
+          <text class="screen-title">Connect Workspace</text>
+          <text class="pairing-copy">Paste a URL, scan QR code, or configure manually</text>
+        </view>
+
+        <!-- Tab selector -->
+        <view class="pairing-tabs">
+          <view class="pairing-tab {{activeTab === 'url' ? 'pairing-tab--active' : ''}}" data-tab="url" bindtap="handleTabChange">
+            <oc-icon name="link" tone="{{activeTab === 'url' ? 'white' : 'dark'}}" size="26rpx" />
+            <text>URL</text>
+          </view>
+          <view class="pairing-tab {{activeTab === 'qr' ? 'pairing-tab--active' : ''}}" data-tab="qr" bindtap="handleTabChange">
+            <oc-icon name="search" tone="{{activeTab === 'qr' ? 'white' : 'dark'}}" size="26rpx" />
+            <text>Scan</text>
+          </view>
+          <view class="pairing-tab {{activeTab === 'manual' ? 'pairing-tab--active' : ''}}" data-tab="manual" bindtap="handleTabChange">
+            <oc-icon name="settings" tone="{{activeTab === 'manual' ? 'white' : 'dark'}}" size="26rpx" />
+            <text>Manual</text>
+          </view>
+        </view>
+
+        <!-- Error -->
+        <text wx:if="{{urlError}}" class="pairing-error">{{urlError}}</text>
+
+        <!-- URL Tab -->
+        <view wx:if="{{activeTab === 'url'}}" class="form-card">
+          <view class="form-field">
+            <text class="form-label">Connection URL</text>
+            <view class="form-input-group">
+              <input
+                class="form-input form-input--with-action"
+                value="{{urlInput}}"
+                bindinput="handleUrlInput"
+                placeholder="ws://host:18080/ws?chatId=xxx&token=xxx"
+                placeholder-style="color: rgba(45, 52, 54, 0.35);"
+              />
+              <view class="form-input-action" bindtap="handlePasteUrl" hover-class="button-pressed">
+                <text class="form-input-action__text">📋</text>
+              </view>
+            </view>
+          </view>
+          <text class="pairing-url-hint">Supports: ws:// / wss:// with query params, or openclaw://connect?serverUrl=...&token=...</text>
+
+          <view class="primary-button primary-button--save" bindtap="handleUrlLogin" hover-class="button-pressed">
+            <text class="primary-button__label">Connect</text>
+            <oc-icon name="arrow-right" tone="white" size="32rpx" />
+          </view>
+        </view>
+
+        <!-- QR Tab -->
+        <view wx:elif="{{activeTab === 'qr'}}" class="form-card pairing-qr-card">
+          <view class="pairing-qr-hero">
+            <oc-icon name="search" tone="dark" size="80rpx" />
+            <text class="pairing-qr-desc">Scan a server QR code to connect instantly</text>
+          </view>
+          <view class="primary-button primary-button--save" bindtap="handleScanQR" hover-class="button-pressed">
+            <text class="primary-button__label">Open Scanner</text>
+          </view>
+        </view>
+
+        <!-- Manual Tab -->
+        <view wx:elif="{{activeTab === 'manual'}}" class="form-card">
+          <view class="form-field">
+            <text class="form-label">Display Name</text>
+            <input class="form-input" value="{{preferenceForm.displayName}}" data-field="displayName" bindinput="handleInput" />
+          </view>
+
+          <view class="form-field">
+            <text class="form-label">Generic Channel WS URL</text>
+            <input
+              class="form-input"
+              value="{{preferenceForm.genericChannelUrl}}"
+              data-field="genericChannelUrl"
+              bindinput="handleInput"
+              placeholder="ws://host:18080/ws"
+              placeholder-style="color: rgba(45, 52, 54, 0.35);"
+            />
+          </view>
+
+          <view class="form-field">
+            <text class="form-label">Auth Token <text class="form-label--hint">(optional)</text></text>
+            <input
+              class="form-input"
+              value="{{preferenceForm.token}}"
+              data-field="token"
+              bindinput="handleInput"
+              placeholder="gc_user_xxxxxxxxx"
+              placeholder-style="color: rgba(45, 52, 54, 0.35);"
+            />
+          </view>
+
+          <view class="form-field">
+            <text class="form-label">Chat ID <text class="form-label--hint">(token auth: must match binding)</text></text>
+            <input
+              class="form-input"
+              value="{{preferenceForm.chatId}}"
+              data-field="chatId"
+              bindinput="handleInput"
+              placeholder="gc-test-main"
+              placeholder-style="color: rgba(45, 52, 54, 0.35);"
+            />
+          </view>
+
+          <view class="form-field">
+            <text class="form-label">Sender ID <text class="form-label--hint">(token auth: must match binding)</text></text>
+            <input
+              class="form-input"
+              value="{{preferenceForm.senderId}}"
+              data-field="senderId"
+              bindinput="handleInput"
+              placeholder="gc-test-main"
+              placeholder-style="color: rgba(45, 52, 54, 0.35);"
+            />
+          </view>
+
+          <view class="primary-button primary-button--save" bindtap="handlePairConnection" hover-class="button-pressed">
+            <text class="primary-button__label">Pair and Continue</text>
+            <oc-icon name="arrow-right" tone="white" size="32rpx" />
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

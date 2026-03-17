@@ -1,0 +1,148 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen">
+    <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
+      <view class="profile-body" style="padding-top: {{contentTopInset}}px;">
+        <text class="screen-title">Profile</text>
+
+        <view class="profile-head">
+          <view class="profile-avatar-placeholder">
+            <text class="profile-avatar-placeholder__text">👤</text>
+          </view>
+          <view class="profile-copy">
+            <text class="profile-name">{{preferenceForm.displayName || 'OpenClaw User'}}</text>
+            <text class="profile-plan">OpenClaw User</text>
+          </view>
+        </view>
+
+        <!-- Server Management -->
+        <view class="form-card">
+          <view class="section-caption section-caption--with-icon section-caption--between">
+            <view class="section-caption__left">
+              <oc-icon name="server" tone="dark" size="24rpx" />
+              <text>Servers</text>
+            </view>
+            <view class="icon-button icon-button--small" bindtap="handleAddServer" hover-class="button-pressed">
+              <oc-icon name="plus" tone="green" size="30rpx" />
+            </view>
+          </view>
+          <view wx:if="{{servers.length}}" class="profile-server-list">
+            <view
+              wx:for="{{servers}}"
+              wx:key="id"
+              class="profile-server-item {{activeServerId === item.id ? 'profile-server-item--active' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="handleActivateServer"
+            >
+              <view class="profile-server-icon {{activeServerId === item.id ? 'profile-server-icon--active' : ''}}">
+                <text wx:if="{{activeServerId === item.id}}">✓</text>
+                <text wx:else>🖥</text>
+              </view>
+              <view class="profile-server-info">
+                <text class="profile-server-name">{{item.name}}</text>
+                <text class="profile-server-url">{{item.serverUrl}}</text>
+              </view>
+              <view class="profile-server-delete" data-id="{{item.id}}" catchtap="handleEditServer">
+                <text class="profile-server-delete__text">✎</text>
+              </view>
+              <view class="profile-server-delete" data-id="{{item.id}}" catchtap="handleRemoveServer">
+                <text class="profile-server-delete__text">✕</text>
+              </view>
+            </view>
+          </view>
+          <view wx:else class="profile-server-empty">
+            <text class="profile-server-empty__text">No servers connected</text>
+            <view class="primary-button primary-button--inline primary-button--compact" bindtap="handleAddServer" hover-class="button-pressed">
+              <oc-icon name="plus" tone="white" size="28rpx" />
+              <text class="primary-button__label">Add Server</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="form-card">
+          <view class="section-caption section-caption--with-icon">
+            <oc-icon name="bell" tone="dark" size="24rpx" />
+            <text>Message Alerts</text>
+          </view>
+          <view class="profile-notify-copy">
+            <text class="profile-notify-title">Foreground alerts are enabled in this build.</text>
+            <text class="profile-notify-desc">For WeChat subscription messages, bind your template IDs first, then grant permission here.</text>
+          </view>
+          <view class="primary-button primary-button--inline" bindtap="handleEnableNotifications" hover-class="button-pressed">
+            <text class="primary-button__label">Enable Subscription Alerts</text>
+          </view>
+        </view>
+
+        <view class="settings-group">
+          <setting-item
+            wx:for="{{profileGroups[0]}}"
+            wx:key="key"
+            item="{{item}}"
+            bindtoggle="handleToggleSetting"
+            bindtap="handleSettingTap"
+          />
+        </view>
+
+        <view class="settings-group">
+          <setting-item
+            wx:for="{{profileGroups[1]}}"
+            wx:key="key"
+            item="{{item}}"
+            bindtoggle="handleToggleSetting"
+            bindtap="handleSettingTap"
+          />
+        </view>
+
+        <view class="danger-button" bindtap="handleLogout" hover-class="button-pressed">
+          <oc-icon name="log-out" tone="red" size="32rpx" />
+          <text>Log Out</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <bottom-nav
+    items="{{navItems}}"
+    currentScreen="{{currentScreen}}"
+    safeAreaBottom="{{safeAreaBottom}}"
+    bindnavigate="handleNavigate"
+  />
+
+  <!-- Edit Server Modal -->
+  <view wx:if="{{editingServer}}" class="edit-modal-mask" bindtap="handleCancelEdit">
+    <view class="edit-modal" catchtap="">
+      <view class="edit-modal__header">
+        <text class="edit-modal__title">Edit Server</text>
+        <view class="edit-modal__close" bindtap="handleCancelEdit">✕</view>
+      </view>
+      <view class="edit-modal__body">
+        <view class="form-field">
+          <text class="form-label">Connection Name</text>
+          <input class="form-input" value="{{editForm.name}}" data-field="name" bindinput="handleEditInput" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">Display Name</text>
+          <input class="form-input" value="{{editForm.displayName}}" data-field="displayName" bindinput="handleEditInput" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">WS URL</text>
+          <input class="form-input" value="{{editForm.serverUrl}}" data-field="serverUrl" bindinput="handleEditInput" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">Auth Token</text>
+          <input class="form-input" value="{{editForm.token}}" data-field="token" bindinput="handleEditInput" placeholder="gc_user_xxxxxxxxx" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">Chat ID</text>
+          <input class="form-input" value="{{editForm.chatId}}" data-field="chatId" bindinput="handleEditInput" placeholder="gc-test-main" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">Sender ID</text>
+          <input class="form-input" value="{{editForm.senderId}}" data-field="senderId" bindinput="handleEditInput" placeholder="gc-test-main" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
+        </view>
+      </view>
+      <view class="primary-button primary-button--save" bindtap="handleSaveEdit" hover-class="button-pressed">
+        <text class="primary-button__label">Save Changes</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,119 @@
+@import "../../theme/page-shell.wxss";
+
+.agent-server-badge {
+  background: rgba(103, 184, 139, 0.12);
+  border-radius: var(--radius-pill);
+  padding: 6rpx 16rpx;
+}
+
+.agent-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.agent-refresh-icon {
+  font-size: 28rpx;
+}
+
+.agent-server-badge__text {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.agent-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.agent-loading__text {
+  font-size: 28rpx;
+  color: var(--color-text-muted);
+}
+
+.empty-state__title {
+  font-size: 30rpx;
+  color: var(--color-text-secondary);
+  margin-bottom: 8rpx;
+}
+
+.empty-state__desc {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 28rpx 24rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-24);
+  border: 2rpx solid rgba(237, 242, 240, 0.5);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 16rpx;
+  animation: cardFadeIn 0.3s ease both;
+}
+
+.agent-card--pressed {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.agent-card__avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #67B88B, #4A9A70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 8rpx 20rpx rgba(103, 184, 139, 0.2);
+}
+
+.agent-card__emoji {
+  font-size: 44rpx;
+}
+
+.agent-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 6rpx;
+}
+
+.agent-card__name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.agent-card__badge {
+  font-size: 20rpx;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 2rpx 12rpx;
+  border-radius: var(--radius-pill);
+}
+
+.agent-card__model {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(20rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}

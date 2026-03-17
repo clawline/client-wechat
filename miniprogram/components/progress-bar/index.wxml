@@ -1,0 +1,3 @@
+<view class="progress-track {{compact ? 'progress-track--compact' : ''}}">
+  <view class="progress-value" style="width: {{value}}%; background: {{color}};"></view>
+</view>

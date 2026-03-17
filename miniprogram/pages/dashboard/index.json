@@ -1,0 +1,9 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "bottom-nav": "../../components/bottom-nav/index",
+    "glass-card": "../../components/glass-card/index",
+    "oc-icon": "../../components/icon/index",
+    "progress-bar": "../../components/progress-bar/index"
+  }
+}

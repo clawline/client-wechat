@@ -1,0 +1,4 @@
+.entry-page {
+  min-height: 100vh;
+  background: #F8FAFB;
+}

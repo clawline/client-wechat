@@ -1,0 +1,194 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen screen--chat-room">
+    <view class="screen-header screen-header--chat" style="padding-top: {{navBarPaddingTop}}px; min-height: {{navBarHeight}}px;">
+      <view class="nav-side-slot" style="width: {{navSideSlotWidth}}px;">
+        <view class="header-icon-button" bindtap="handleBack" hover-class="button-pressed">
+          <oc-icon name="chevron-left" tone="dark" size="42rpx" />
+        </view>
+      </view>
+
+      <view class="chat-room-head">
+        <text class="chat-room-head__title">{{agentEmoji}} {{agentName}}</text>
+        <view class="chat-room-head__status" bindtap="handleReconnectChat">
+          <view class="chat-room-head__status-dot chat-room-head__status-dot--{{genericConnectionTone}}"></view>
+          <text class="chat-room-head__status-text chat-room-head__status-text--{{genericConnectionTone}}">{{genericConnectionStatusText}}</text>
+        </view>
+      </view>
+
+      <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
+    </view>
+
+    <scroll-view class="chat-room-scroll" scroll-y scroll-into-view="{{chatScrollAnchor}}">
+      <view class="chat-room-list">
+        <view wx:if="{{!messages.length && !showThinkingIndicator}}" class="chat-room-empty">
+          <text class="chat-room-empty__title">Conversation ready</text>
+          <text class="chat-room-empty__desc">{{genericConnectionDetail}}</text>
+        </view>
+
+        <block wx:for="{{displayMessages}}" wx:key="id">
+          <!-- Date separator -->
+          <view wx:if="{{item.type === 'date-separator'}}" class="date-separator">
+            <view class="date-separator__line"></view>
+            <text class="date-separator__text">{{item.text}}</text>
+            <view class="date-separator__line"></view>
+          </view>
+
+          <!-- Message bubble -->
+          <block wx:else>
+            <message-bubble
+              message="{{item}}"
+              agentEmoji="{{agentEmoji}}"
+              isActive="{{activeBubbleId === item.id}}"
+              delay="{{index * 30}}"
+              bindselect="handleBubbleSelect"
+              bindreaction="handleOpenReactionPicker"
+              bindeditmsg="handleEditMessage"
+              binddeletemsg="handleDeleteMessage"
+              bindreplymsg="handleStartReply"
+            />
+          </block>
+        </block>
+
+        <!-- Action cards for AI messages with detectable actions -->
+        <block wx:for="{{messages}}" wx:key="id">
+          <view wx:if="{{item.sender !== 'user' && item.actions && item.actions.options.length}}" class="action-card">
+            <text class="action-card__title">{{item.actions.title}}</text>
+            <view class="action-card__options">
+              <view
+                wx:for="{{item.actions.options}}"
+                wx:for-item="opt"
+                wx:key="command"
+                class="action-chip"
+                data-command="{{opt.command}}"
+                bindtap="handleActionTap"
+                hover-class="action-chip--pressed"
+              >
+                <text class="action-chip__label">{{opt.label}}</text>
+                <text wx:if="{{opt.badge}}" class="action-chip__badge">({{opt.badge}})</text>
+              </view>
+            </view>
+          </view>
+        </block>
+
+        <view wx:if="{{showThinkingIndicator}}" class="thinking-row">
+          <view class="thinking-avatar">OC</view>
+          <view class="thinking-bubble">
+            <view class="thinking-dots">
+              <view class="thinking-dot thinking-dot--1"></view>
+              <view class="thinking-dot thinking-dot--2"></view>
+              <view class="thinking-dot thinking-dot--3"></view>
+            </view>
+            <text class="thinking-text">{{thinkingText}}</text>
+          </view>
+        </view>
+
+        <view wx:if="{{peerTyping && !showThinkingIndicator}}" class="typing-indicator-row">
+          <view class="thinking-avatar">{{agentEmoji}}</view>
+          <view class="typing-indicator-bubble">
+            <view class="thinking-dots">
+              <view class="thinking-dot thinking-dot--1"></view>
+              <view class="thinking-dot thinking-dot--2"></view>
+              <view class="thinking-dot thinking-dot--3"></view>
+            </view>
+            <text class="typing-indicator-text">typing...</text>
+          </view>
+        </view>
+
+        <view id="message-end" class="message-end-anchor"></view>
+      </view>
+    </scroll-view>
+
+    <floating-panel visible="{{showSlashMenu}}" extraClass="slash-panel" bindclose="handleClosePanels">
+      <view class="slash-list">
+        <view
+          wx:for="{{slashCommands}}"
+          wx:key="id"
+          class="slash-item"
+          data-label="{{item.label}}"
+          bindtap="handleSelectCommand"
+          hover-class="slash-item--pressed"
+        >
+          <view class="slash-item__icon">
+            <oc-icon name="{{item.icon}}" tone="green" size="34rpx" />
+          </view>
+          <view class="slash-item__copy">
+            <text class="slash-item__label">{{item.label}}</text>
+            <text class="slash-item__desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+    </floating-panel>
+
+    <emoji-picker
+      visible="{{showEmojiPicker}}"
+      emojiList="{{emojiList}}"
+      bindclose="handleClosePanels"
+      bindselect="handleEmojiSelect"
+    />
+
+    <view class="chat-room-input" style="padding-bottom: {{inputSafeAreaBottom}}px;">
+      <!-- Quick commands -->
+      <scroll-view wx:if="{{!showSlashMenu && !showEmojiPicker && !inputValue}}" class="quick-commands" scroll-x>
+        <view
+          wx:for="{{quickCommands}}"
+          wx:key="label"
+          class="quick-cmd"
+          data-command="{{item.label}}"
+          bindtap="handleQuickCommand"
+          hover-class="quick-cmd--pressed"
+        >
+          <text class="quick-cmd__emoji">{{item.emoji}}</text>
+          <text class="quick-cmd__label">{{item.label}}</text>
+        </view>
+      </scroll-view>
+
+      <!-- Edit bar -->
+      <view wx:if="{{editingMsg}}" class="edit-bar">
+        <view class="edit-bar__indicator"></view>
+        <view class="edit-bar__content">
+          <text class="edit-bar__label">Editing message</text>
+          <text class="edit-bar__text">{{editingMsg.text}}</text>
+        </view>
+        <view class="edit-bar__close" bindtap="handleCancelEdit">✕</view>
+      </view>
+
+      <!-- Reply bar -->
+      <view wx:elif="{{replyingTo}}" class="reply-bar">
+        <view class="reply-bar__indicator"></view>
+        <view class="reply-bar__content">
+          <text class="reply-bar__label">Replying to {{replyingTo.sender === 'user' ? 'yourself' : 'Bot'}}</text>
+          <text class="reply-bar__text">{{replyingTo.text}}</text>
+        </view>
+        <view class="reply-bar__close" bindtap="handleCancelReply">✕</view>
+      </view>
+
+      <view class="chat-input-shell">
+        <view class="header-icon-button header-icon-button--ghost" bindtap="handleToggleEmojiPicker" hover-class="button-pressed">
+          <oc-icon name="smile" tone="{{showEmojiPicker && !reactingToMsgId ? 'green' : 'dark'}}" size="40rpx" />
+        </view>
+        <view class="header-icon-button header-icon-button--ghost" bindtap="handleChooseImage" hover-class="button-pressed">
+          <text class="chat-media-icon">📷</text>
+        </view>
+        <input
+          class="chat-input"
+          value="{{inputValue}}"
+          placeholder="Message OpenClaw..."
+          placeholder-style="color: rgba(45, 52, 54, 0.35);"
+          bindinput="handleMessageInput"
+          confirm-type="send"
+          bindconfirm="handleSendMessage"
+        />
+        <block wx:if="{{inputValue}}">
+          <view class="chat-send chat-send--active" bindtap="handleSendMessage" hover-class="button-pressed">
+            <oc-icon name="send" tone="white" size="34rpx" />
+          </view>
+        </block>
+        <block wx:else>
+          <view class="chat-send {{isRecording ? 'chat-send--recording' : ''}}" bindtap="handleVoiceRecord" hover-class="button-pressed">
+            <text class="chat-media-icon">{{isRecording ? '⏹' : '🎙'}}</text>
+          </view>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

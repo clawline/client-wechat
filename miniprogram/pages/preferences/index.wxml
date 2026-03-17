@@ -1,0 +1,97 @@
+<view class="shell-page {{darkMode ? 'dark-mode' : ''}}">
+  <view class="screen">
+    <view class="screen-header screen-header--chat" style="padding-top: {{navBarPaddingTop}}px; min-height: {{navBarHeight}}px;">
+      <view class="nav-side-slot" style="width: {{navSideSlotWidth}}px;">
+        <view class="header-icon-button" bindtap="handleBack" hover-class="button-pressed">
+          <oc-icon name="chevron-left" tone="dark" size="42rpx" />
+        </view>
+      </view>
+      <view class="screen-header__center">
+        <text class="screen-header__title">Preferences</text>
+      </view>
+      <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
+    </view>
+
+    <scroll-view class="screen-scroll" scroll-y>
+      <view class="preferences-body">
+        <view class="preferences-section">
+          <view class="section-caption section-caption--with-icon">
+            <oc-icon name="user" tone="dark" size="24rpx" />
+            <text>Personal Info</text>
+          </view>
+          <view class="form-card">
+            <view class="form-field">
+              <text class="form-label">Display Name</text>
+              <input class="form-input" value="{{preferenceForm.displayName}}" data-field="displayName" bindinput="handleInput" />
+            </view>
+            <view class="form-field">
+              <text class="form-label">Email Address</text>
+              <input class="form-input" value="{{preferenceForm.email}}" data-field="email" bindinput="handleInput" />
+            </view>
+            <view class="form-field">
+              <text class="form-label">Generic Channel WS URL</text>
+              <input class="form-input" value="{{preferenceForm.genericChannelUrl}}" data-field="genericChannelUrl" bindinput="handleInput" />
+            </view>
+          </view>
+        </view>
+
+        <view class="preferences-section">
+          <view class="section-caption section-caption--with-icon">
+            <oc-icon name="sliders" tone="dark" size="24rpx" />
+            <text>AI Configuration</text>
+          </view>
+          <view class="form-card">
+            <view class="form-field">
+              <text class="form-label">Default Model</text>
+              <picker mode="selector" range="{{preferenceForm.modelOptions}}" value="{{preferenceForm.selectedModelIndex}}" bindchange="handleModelChange">
+                <view class="picker-field">
+                  <text>{{preferenceForm.modelOptions[preferenceForm.selectedModelIndex]}}</text>
+                  <oc-icon name="chevron-right" tone="dark" size="24rpx" />
+                </view>
+              </picker>
+            </view>
+
+            <view class="form-field">
+              <view class="slider-head">
+                <text class="form-label">Creativity (Temperature)</text>
+                <text class="slider-value">{{preferenceForm.temperature / 100}}</text>
+              </view>
+              <slider
+                min="0"
+                max="100"
+                step="10"
+                value="{{preferenceForm.temperature}}"
+                activeColor="#67B88B"
+                backgroundColor="#EDF2F0"
+                block-color="#67B88B"
+                bindchange="handleTemperatureChange"
+              />
+              <view class="slider-foot">
+                <text>Precise</text>
+                <text>Creative</text>
+              </view>
+            </view>
+
+            <view class="form-field">
+              <text class="form-label">Custom System Prompt</text>
+              <textarea
+                class="form-textarea"
+                auto-height
+                value="{{preferenceForm.systemPrompt}}"
+                data-field="systemPrompt"
+                placeholder="E.g., Always answer in TypeScript..."
+                placeholder-style="color: rgba(45, 52, 54, 0.35);"
+                bindinput="handleInput"
+              />
+            </view>
+          </view>
+        </view>
+
+        <view class="primary-button primary-button--save" bindtap="handleSave" hover-class="button-pressed">
+          <oc-icon name="save" tone="white" size="32rpx" />
+          <text class="primary-button__label">Save Preferences</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

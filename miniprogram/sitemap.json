@@ -1,0 +1,9 @@
+{
+  "desc": "OpenClaw native miniprogram sitemap",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

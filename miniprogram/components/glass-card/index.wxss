@@ -1,0 +1,13 @@
+@import "../../theme/tokens.wxss";
+
+.glass-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
+  border: 2rpx solid rgba(255, 255, 255, 0.84);
+  border-radius: var(--radius-32);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(24rpx);
+}
+
+.glass-card--padded {
+  padding: 32rpx;
+}

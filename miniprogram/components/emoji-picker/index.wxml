@@ -1,0 +1,14 @@
+<floating-panel visible="{{visible}}" extraClass="emoji-panel" bindclose="handleClose">
+  <view class="emoji-grid">
+    <view
+      wx:for="{{emojiList}}"
+      wx:key="*this"
+      class="emoji-cell"
+      data-emoji="{{item}}"
+      bindtap="handleSelect"
+      hover-class="emoji-cell--pressed"
+    >
+      <text class="emoji-text">{{item}}</text>
+    </view>
+  </view>
+</floating-panel>

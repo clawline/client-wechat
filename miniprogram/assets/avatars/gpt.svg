@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4DA7FF"/>
+      <stop offset="100%" stop-color="#2578D7"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="100" fill="url(#bg)"/>
+  <circle cx="100" cy="82" r="34" fill="rgba(255,255,255,0.18)"/>
+  <path d="M46 166c8-28 30-44 54-44s46 16 54 44" fill="rgba(255,255,255,0.18)"/>
+  <text x="100" y="116" font-size="54" font-family="SF Pro Display, PingFang SC, sans-serif" fill="#FFFFFF" text-anchor="middle" font-weight="700">G</text>
+</svg>

@@ -1,0 +1,9 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "emoji-picker": "../../components/emoji-picker/index",
+    "floating-panel": "../../components/floating-panel/index",
+    "message-bubble": "../../components/message-bubble/index",
+    "oc-icon": "../../components/icon/index"
+  }
+}

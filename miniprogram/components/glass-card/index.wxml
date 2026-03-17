@@ -1,0 +1,3 @@
+<view class="glass-card {{padded ? 'glass-card--padded' : ''}} {{extraClass}}">
+  <slot />
+</view>
