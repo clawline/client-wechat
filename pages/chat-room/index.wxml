@@ -6,16 +6,23 @@
           <oc-icon name="chevron-left" tone="dark" size="42rpx" />
         </view>
       </view>
-
       <view class="chat-room-head">
         <text class="chat-room-head__title">{{agentEmoji}} {{agentName}}</text>
         <view class="chat-room-head__status" bindtap="handleReconnectChat">
-          <view class="chat-room-head__status-dot chat-room-head__status-dot--{{genericConnectionTone}}"></view>
-          <text class="chat-room-head__status-text chat-room-head__status-text--{{genericConnectionTone}}">{{genericConnectionStatusText}}</text>
+          <view class="chat-room-head__status-dot"></view>
+          <text class="chat-room-head__status-text">{{genericConnectionStatusText}}</text>
         </view>
       </view>
-
       <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
+    </view>
+
+    <view wx:if="{{showDisconnectBanner}}" class="disconnect-banner disconnect-banner--{{disconnectBannerTone}}" bindtap="handleReconnectChat">
+      <text class="disconnect-banner__text">{{disconnectBannerText}}</text>
+    </view>
+
+    <view wx:if="{{errorToast}}" class="error-toast">
+      <text class="error-toast__title">{{errorToast.title}}</text>
+      <text class="error-toast__body">{{errorToast.body}}</text>
     </view>
 
     <scroll-view class="chat-room-scroll" scroll-y scroll-into-view="{{chatScrollAnchor}}">
@@ -26,17 +33,15 @@
         </view>
 
         <block wx:for="{{displayMessages}}" wx:key="id">
-          <!-- Date separator -->
           <view wx:if="{{item.type === 'date-separator'}}" class="date-separator">
             <view class="date-separator__line"></view>
             <text class="date-separator__text">{{item.text}}</text>
             <view class="date-separator__line"></view>
           </view>
-
-          <!-- Message bubble -->
           <block wx:else>
             <message-bubble
               message="{{item}}"
+              messages="{{messages}}"
               agentEmoji="{{agentEmoji}}"
               isActive="{{activeBubbleId === item.id}}"
               delay="{{index * 30}}"
@@ -49,22 +54,12 @@
           </block>
         </block>
 
-        <!-- Action cards for AI messages with detectable actions -->
         <block wx:for="{{messages}}" wx:key="id">
           <view wx:if="{{item.sender !== 'user' && item.actions && item.actions.options.length}}" class="action-card">
             <text class="action-card__title">{{item.actions.title}}</text>
             <view class="action-card__options">
-              <view
-                wx:for="{{item.actions.options}}"
-                wx:for-item="opt"
-                wx:key="command"
-                class="action-chip"
-                data-command="{{opt.command}}"
-                bindtap="handleActionTap"
-                hover-class="action-chip--pressed"
-              >
+              <view wx:for="{{item.actions.options}}" wx:for-item="opt" wx:key="command" class="action-chip" data-command="{{opt.command}}" bindtap="handleActionTap" hover-class="action-chip--pressed">
                 <text class="action-chip__label">{{opt.label}}</text>
-                <text wx:if="{{opt.badge}}" class="action-chip__badge">({{opt.badge}})</text>
               </view>
             </view>
           </view>
@@ -100,14 +95,7 @@
 
     <floating-panel visible="{{showSlashMenu}}" extraClass="slash-panel" bindclose="handleClosePanels">
       <view class="slash-list">
-        <view
-          wx:for="{{slashCommands}}"
-          wx:key="id"
-          class="slash-item"
-          data-label="{{item.label}}"
-          bindtap="handleSelectCommand"
-          hover-class="slash-item--pressed"
-        >
+        <view wx:for="{{slashCommands}}" wx:key="id" class="slash-item" data-label="{{item.label}}" bindtap="handleSelectCommand" hover-class="slash-item--pressed">
           <view class="slash-item__icon">
             <oc-icon name="{{item.icon}}" tone="green" size="34rpx" />
           </view>
@@ -119,30 +107,18 @@
       </view>
     </floating-panel>
 
-    <emoji-picker
-      visible="{{showEmojiPicker}}"
-      emojiList="{{emojiList}}"
-      bindclose="handleClosePanels"
-      bindselect="handleEmojiSelect"
-    />
+    <emoji-picker visible="{{showEmojiPicker}}" emojiList="{{emojiList}}" bindclose="handleClosePanels" bindselect="handleEmojiSelect" />
 
     <view class="chat-room-input" style="padding-bottom: {{inputSafeAreaBottom}}px;">
-      <!-- Quick commands -->
-      <scroll-view wx:if="{{!showSlashMenu && !showEmojiPicker && !inputValue}}" class="quick-commands" scroll-x>
-        <view
-          wx:for="{{quickCommands}}"
-          wx:key="label"
-          class="quick-cmd"
-          data-command="{{item.label}}"
-          bindtap="handleQuickCommand"
-          hover-class="quick-cmd--pressed"
-        >
-          <text class="quick-cmd__emoji">{{item.emoji}}</text>
-          <text class="quick-cmd__label">{{item.label}}</text>
+      <scroll-view wx:if="{{showSuggestionBar}}" class="suggestion-bar" scroll-x>
+        <view wx:if="{{showFollowUpPill}}" class="suggestion-pill suggestion-pill--follow" data-value="催一下" bindtap="handleQuickCommand">
+          <text class="suggestion-pill__text">催一下</text>
+        </view>
+        <view wx:for="{{suggestionItems}}" wx:key="*this" class="suggestion-pill" data-value="{{item}}" bindtap="handleQuickCommand">
+          <text class="suggestion-pill__text">{{item}}</text>
         </view>
       </scroll-view>
 
-      <!-- Edit bar -->
       <view wx:if="{{editingMsg}}" class="edit-bar">
         <view class="edit-bar__indicator"></view>
         <view class="edit-bar__content">
@@ -152,7 +128,6 @@
         <view class="edit-bar__close" bindtap="handleCancelEdit">✕</view>
       </view>
 
-      <!-- Reply bar -->
       <view wx:elif="{{replyingTo}}" class="reply-bar">
         <view class="reply-bar__indicator"></view>
         <view class="reply-bar__content">
@@ -164,20 +139,12 @@
 
       <view class="chat-input-shell">
         <view class="header-icon-button header-icon-button--ghost" bindtap="handleToggleEmojiPicker" hover-class="button-pressed">
-          <oc-icon name="smile" tone="{{showEmojiPicker && !reactingToMsgId ? 'green' : 'dark'}}" size="40rpx" />
+          <oc-icon name="smile" tone="dark" size="40rpx" />
         </view>
         <view class="header-icon-button header-icon-button--ghost" bindtap="handleChooseImage" hover-class="button-pressed">
           <text class="chat-media-icon">📷</text>
         </view>
-        <input
-          class="chat-input"
-          value="{{inputValue}}"
-          placeholder="Message OpenClaw..."
-          placeholder-style="color: rgba(45, 52, 54, 0.35);"
-          bindinput="handleMessageInput"
-          confirm-type="send"
-          bindconfirm="handleSendMessage"
-        />
+        <input class="chat-input" value="{{inputValue}}" placeholder="Message OpenClaw..." placeholder-style="color: rgba(45, 52, 54, 0.35);" bindinput="handleMessageInput" confirm-type="send" bindconfirm="handleSendMessage" />
         <block wx:if="{{inputValue}}">
           <view class="chat-send chat-send--active" bindtap="handleSendMessage" hover-class="button-pressed">
             <oc-icon name="send" tone="white" size="34rpx" />

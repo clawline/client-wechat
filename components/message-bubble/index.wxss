@@ -249,10 +249,24 @@
   margin: 16rpx 0;
 }
 
+.message-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 4rpx;
+}
+
+.message-time-row--user {
+  justify-content: flex-end;
+}
+
+.message-time-row--ai {
+  justify-content: flex-start;
+}
+
 .message-time {
   font-size: 20rpx;
   color: var(--color-text-muted);
-  margin-top: 4rpx;
   opacity: 0.5;
 }
 
@@ -262,6 +276,16 @@
 
 .message-time--ai {
   text-align: left;
+}
+
+.message-delivery {
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+}
+
+.message-delivery--read {
+  color: #5B8DEF;
 }
 
 /* Quote reference */
