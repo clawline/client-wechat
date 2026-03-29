@@ -1,135 +1,140 @@
+<!-- Flat thread-style message (no bubbles, Slack/Discord inspired) -->
 <view
   id="message-{{message.id}}"
-  class="message-row {{message.sender === 'user' ? 'message-row--user' : 'message-row--ai'}}"
+  class="msg-row {{isActive ? 'msg-row--active' : ''}}"
   style="animation-delay: {{delay}}ms;"
+  bindtap="handleBubbleTap"
+  bindlongpress="handleLongPress"
 >
-  <view wx:if="{{message.sender !== 'user'}}" class="message-avatar">{{agentEmoji}}</view>
+  <!-- Avatar column -->
+  <view class="msg-avatar-col">
+    <view wx:if="{{!grouped}}" class="msg-avatar {{message.sender === 'user' ? 'msg-avatar--user' : 'msg-avatar--ai'}}">
+      <text class="msg-avatar__text">{{message.sender === 'user' ? '👤' : agentEmoji}}</text>
+    </view>
+    <text wx:else class="msg-hover-time">{{message.formattedTime}}</text>
+  </view>
 
-  <view class="message-stack {{message.sender === 'user' ? 'message-stack--user' : 'message-stack--ai'}}">
-    <view class="message-main {{message.sender === 'user' ? 'message-main--user' : 'message-main--ai'}}">
-      <view
-        class="message-bubble {{message.sender === 'user' ? 'message-bubble--user' : 'message-bubble--ai'}}"
-        bindtap="handleBubbleTap"
-        bindlongpress="handleLongPress"
-      >
-        <!-- Quote reference -->
-        <view wx:if="{{message.replyTo && replyToText}}" class="md-quote-ref {{message.sender === 'user' ? 'md-quote-ref--user' : 'md-quote-ref--ai'}}">
-          <text class="md-quote-ref__text">{{replyToText}}</text>
-        </view>
+  <!-- Content column -->
+  <view class="msg-body">
+    <!-- Header (only for first in group) -->
+    <view wx:if="{{!grouped}}" class="msg-header">
+      <text class="msg-sender {{message.sender === 'user' ? 'msg-sender--user' : 'msg-sender--ai'}}">{{message.sender === 'user' ? '我' : (agentName || '对方')}}</text>
+      <text class="msg-time">{{message.formattedTime}}</text>
+      <text wx:if="{{message.sender !== 'user' && message.model}}" class="msg-model">{{message.model}}</text>
+    </view>
 
-        <!-- User: plain text -->
-        <text wx:if="{{message.sender === 'user' && !message.mediaType}}" class="message-text">{{message.text}}</text>
+    <!-- Inline reply reference -->
+    <view wx:if="{{message.replyTo && replyToText}}" class="msg-reply-ref">
+      <text class="msg-reply-ref__icon">↩</text>
+      <text class="msg-reply-ref__text">{{replyToText}}</text>
+    </view>
 
-        <!-- User: image -->
-        <image wx:elif="{{message.sender === 'user' && message.mediaType === 'image'}}" src="{{message.mediaUrl}}" class="message-image" mode="widthFix" />
+    <!-- User: plain text -->
+    <text wx:if="{{message.sender === 'user' && !message.mediaType}}" class="msg-text" user-select>{{message.text}}</text>
 
-        <!-- User: voice -->
-        <text wx:elif="{{message.sender === 'user' && message.mediaType === 'voice'}}" class="message-text">🎙️ Voice message</text>
+    <!-- User: image -->
+    <image wx:elif="{{message.sender === 'user' && message.mediaType === 'image'}}" src="{{message.mediaUrl}}" class="msg-image" mode="widthFix" />
 
-        <!-- User: other text -->
-        <text wx:elif="{{message.sender === 'user'}}" class="message-text">{{message.text}}</text>
+    <!-- User: voice -->
+    <text wx:elif="{{message.sender === 'user' && message.mediaType === 'voice'}}" class="msg-text">🎙️ 语音消息</text>
 
-        <!-- AI: markdown rendered -->
-        <view wx:else class="md-content">
-          <block wx:for="{{mdNodes}}" wx:key="index">
-            <!-- Paragraph -->
-            <view wx:if="{{item.type === 'paragraph'}}" class="md-p">
-              <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
-                <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'link'}}" class="md-link" data-href="{{seg.href}}" bindtap="handleLinkTap">{{seg.text}}</text>
-              </block>
-            </view>
+    <!-- User: other -->
+    <text wx:elif="{{message.sender === 'user'}}" class="msg-text" user-select>{{message.text}}</text>
 
-            <!-- Heading -->
-            <view wx:elif="{{item.type === 'heading'}}" class="md-h md-h--{{item.level}}">
-              <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
-                <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
-              </block>
-            </view>
-
-            <!-- Code block -->
-            <view wx:elif="{{item.type === 'codeblock'}}" class="md-codeblock">
-              <text wx:if="{{item.lang}}" class="md-codeblock__lang">{{item.lang}}</text>
-              <scroll-view scroll-x class="md-codeblock__scroll">
-                <text class="md-codeblock__text" user-select>{{item.text}}</text>
-              </scroll-view>
-            </view>
-
-            <!-- Unordered list -->
-            <view wx:elif="{{item.type === 'ul'}}" class="md-list">
-              <view wx:for="{{item.items}}" wx:for-item="li" wx:key="index" class="md-list-item">
-                <text class="md-list-bullet">•</text>
-                <view class="md-list-content">
-                  <block wx:for="{{li.segments}}" wx:for-item="seg" wx:key="index">
-                    <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
-                    <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
-                    <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
-                  </block>
-                </view>
-              </view>
-            </view>
-
-            <!-- Ordered list -->
-            <view wx:elif="{{item.type === 'ol'}}" class="md-list">
-              <view wx:for="{{item.items}}" wx:for-item="li" wx:key="index" class="md-list-item">
-                <text class="md-list-bullet">{{index + 1}}.</text>
-                <view class="md-list-content">
-                  <block wx:for="{{li.segments}}" wx:for-item="seg" wx:key="index">
-                    <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
-                    <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
-                    <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
-                  </block>
-                </view>
-              </view>
-            </view>
-
-            <!-- Blockquote -->
-            <view wx:elif="{{item.type === 'blockquote'}}" class="md-blockquote">
-              <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
-                <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
-                <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
-              </block>
-            </view>
-
-            <!-- HR -->
-            <view wx:elif="{{item.type === 'hr'}}" class="md-hr"></view>
+    <!-- AI: markdown rendered -->
+    <view wx:else class="md-content">
+      <block wx:for="{{mdNodes}}" wx:key="index">
+        <view wx:if="{{item.type === 'paragraph'}}" class="md-p">
+          <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
+            <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'link'}}" class="md-link" data-href="{{seg.href}}" bindtap="handleLinkTap">{{seg.text}}</text>
           </block>
         </view>
-      </view>
 
-      <view wx:if="{{isActive}}" class="message-actions-row {{message.sender === 'user' ? 'message-actions-row--user' : 'message-actions-row--ai'}}">
-        <view class="message-action" bindtap="handleReplyTap" hover-class="message-action--pressed">
-          <text class="message-action__icon">↩</text>
+        <view wx:elif="{{item.type === 'heading'}}" class="md-h md-h--{{item.level}}">
+          <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
+            <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
+          </block>
         </view>
-        <view class="message-action" bindtap="handleReactionTap" hover-class="message-action--pressed">
-          <oc-icon name="smile-plus" tone="dark" size="30rpx" />
+
+        <view wx:elif="{{item.type === 'codeblock'}}" class="md-codeblock">
+          <text wx:if="{{item.lang}}" class="md-codeblock__lang">{{item.lang}}</text>
+          <scroll-view scroll-x class="md-codeblock__scroll">
+            <text class="md-codeblock__text" user-select>{{item.text}}</text>
+          </scroll-view>
         </view>
-        <view wx:if="{{message.sender === 'user'}}" class="message-action" bindtap="handleEditTap" hover-class="message-action--pressed">
-          <text class="message-action__icon">✎</text>
+
+        <view wx:elif="{{item.type === 'ul'}}" class="md-list">
+          <view wx:for="{{item.items}}" wx:for-item="li" wx:key="index" class="md-list-item">
+            <text class="md-list-bullet">•</text>
+            <view class="md-list-content">
+              <block wx:for="{{li.segments}}" wx:for-item="seg" wx:key="index">
+                <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
+                <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
+                <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
+              </block>
+            </view>
+          </view>
         </view>
-        <view class="message-action message-action--danger" bindtap="handleDeleteTap" hover-class="message-action--pressed">
-          <text class="message-action__icon">🗑</text>
+
+        <view wx:elif="{{item.type === 'ol'}}" class="md-list">
+          <view wx:for="{{item.items}}" wx:for-item="li" wx:key="index" class="md-list-item">
+            <text class="md-list-bullet">{{index + 1}}.</text>
+            <view class="md-list-content">
+              <block wx:for="{{li.segments}}" wx:for-item="seg" wx:key="index">
+                <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
+                <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
+                <text wx:elif="{{seg.type === 'code'}}" class="md-inline-code">{{seg.text}}</text>
+              </block>
+            </view>
+          </view>
         </view>
+
+        <view wx:elif="{{item.type === 'blockquote'}}" class="md-blockquote">
+          <block wx:for="{{item.segments}}" wx:for-item="seg" wx:key="index">
+            <text wx:if="{{seg.type === 'text'}}" class="md-text">{{seg.text}}</text>
+            <text wx:elif="{{seg.type === 'bold'}}" class="md-bold">{{seg.text}}</text>
+          </block>
+        </view>
+
+        <view wx:elif="{{item.type === 'hr'}}" class="md-hr"></view>
+      </block>
+    </view>
+
+    <!-- Delivery status (user messages only) -->
+    <view wx:if="{{message.sender === 'user' && message.deliveryStatus}}" class="msg-delivery">
+      <text wx:if="{{message.deliveryStatus === 'pending'}}" class="msg-delivery__icon msg-delivery--pending">○</text>
+      <text wx:elif="{{message.deliveryStatus === 'sent'}}" class="msg-delivery__icon msg-delivery--sent">✓</text>
+      <text wx:elif="{{message.deliveryStatus === 'delivered'}}" class="msg-delivery__icon msg-delivery--delivered">✓✓</text>
+      <text wx:elif="{{message.deliveryStatus === 'read'}}" class="msg-delivery__icon msg-delivery--read">✓✓</text>
+      <text wx:elif="{{message.deliveryStatus === 'failed'}}" class="msg-delivery__icon msg-delivery--failed" catchtap="onRetryTap" data-msg-id="{{message.id}}">✕ 重试</text>
+    </view>
+
+    <!-- Reactions -->
+    <view wx:if="{{message.reactions && message.reactions.length}}" class="msg-reactions">
+      <view wx:for="{{message.reactions}}" wx:key="*this" class="msg-reaction" bindtap="handleReactionTap" hover-class="msg-reaction--pressed">
+        <text class="msg-reaction__emoji">{{item}}</text>
       </view>
     </view>
 
-    <view wx:if="{{message.reactions && message.reactions.length}}" class="message-reactions {{message.sender === 'user' ? 'message-reactions--user' : 'message-reactions--ai'}}">
-      <view wx:for="{{message.reactions}}" wx:key="*this" class="message-reaction" bindtap="handleReactionTap" hover-class="message-reaction--pressed">
-        <text class="message-reaction__emoji">{{item}}</text>
+    <!-- Actions row (on active) -->
+    <view wx:if="{{isActive}}" class="msg-actions">
+      <view class="msg-action" bindtap="handleReplyTap" hover-class="msg-action--pressed">
+        <text class="msg-action__icon">↩</text>
       </view>
-    </view>
-
-    <view wx:if="{{message.formattedTime}}" class="message-time-row {{message.sender === 'user' ? 'message-time-row--user' : 'message-time-row--ai'}}">
-      <text class="message-time {{message.sender === 'user' ? 'message-time--user' : 'message-time--ai'}}">{{message.formattedTime}}</text>
-      <text wx:if="{{message.sender === 'user' && message.deliveryStatus === 'pending'}}" class="message-delivery message-delivery--pending">○</text>
-      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'sent'}}" class="message-delivery message-delivery--sent">✓</text>
-      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'delivered'}}" class="message-delivery message-delivery--delivered">✓✓</text>
-      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'read'}}" class="message-delivery message-delivery--read">✓✓</text>
-      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'failed'}}" class="message-delivery message-delivery--failed" catchtap="onRetryTap" data-msg-id="{{message.id}}">✕ 重试</text>
+      <view class="msg-action" bindtap="handleReactionTap" hover-class="msg-action--pressed">
+        <oc-icon name="smile-plus" tone="dark" size="28rpx" />
+      </view>
+      <view wx:if="{{message.sender === 'user'}}" class="msg-action" bindtap="handleEditTap" hover-class="msg-action--pressed">
+        <text class="msg-action__icon">✎</text>
+      </view>
+      <view class="msg-action msg-action--danger" bindtap="handleDeleteTap" hover-class="msg-action--pressed">
+        <text class="msg-action__icon">🗑</text>
+      </view>
     </view>
   </view>
 </view>

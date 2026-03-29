@@ -139,7 +139,12 @@ function addDateSeparators(messages) {
     if (isDifferentDay(prev ? prev.timestamp : null, msg.timestamp) && msg.timestamp) {
       result.push({ id: 'sep-' + msg.id, type: 'date-separator', text: formatDate(msg.timestamp) });
     }
-    result.push(Object.assign({}, msg, { formattedTime: formatTime(msg.timestamp) }));
+    // Group consecutive messages from same sender within 3 minutes
+    var grouped = false;
+    if (prev && prev.sender === msg.sender && msg.timestamp && prev.timestamp) {
+      grouped = (msg.timestamp - prev.timestamp) < 180000;
+    }
+    result.push(Object.assign({}, msg, { formattedTime: formatTime(msg.timestamp), grouped: grouped }));
   }
   return result;
 }
@@ -164,6 +169,7 @@ Page({
     inputValue: '',
     showSlashMenu: false,
     showEmojiPicker: false,
+    showAttachMenu: false,
     showThinkingIndicator: false,
     thinkingText: DEFAULT_THINKING_TEXT,
     thinkingStartAt: 0,
@@ -980,14 +986,18 @@ Page({
     this._recorderManager.start({ format: 'aac', duration: 60000 });
   },
 
+  handleToggleAttachMenu() {
+    this.setData({ showAttachMenu: !this.data.showAttachMenu, showEmojiPicker: false, showSlashMenu: false });
+  },
+
   handleToggleEmojiPicker() {
     const nextVisible = !(this.data.showEmojiPicker && !this.data.reactingToMsgId);
-    this.setData({ showEmojiPicker: nextVisible, showSlashMenu: false, reactingToMsgId: '', activeBubbleId: '' });
+    this.setData({ showEmojiPicker: nextVisible, showSlashMenu: false, showAttachMenu: false, reactingToMsgId: '', activeBubbleId: '' });
     this.refreshSuggestionBar();
   },
 
   handleClosePanels() {
-    this.setData({ showSlashMenu: false, showEmojiPicker: false, slashCommands: clone(this.data.slashCommandCatalog), reactingToMsgId: '', activeBubbleId: '', errorToast: null });
+    this.setData({ showSlashMenu: false, showEmojiPicker: false, showAttachMenu: false, slashCommands: clone(this.data.slashCommandCatalog), reactingToMsgId: '', activeBubbleId: '', errorToast: null });
     this.refreshSuggestionBar();
   },
 

@@ -43,6 +43,8 @@
               message="{{item}}"
               messages="{{messages}}"
               agentEmoji="{{agentEmoji}}"
+              agentName="{{agentName}}"
+              grouped="{{item.grouped}}"
               isActive="{{activeBubbleId === item.id}}"
               delay="{{index * 30}}"
               bindselect="handleBubbleSelect"
@@ -139,11 +141,8 @@
       </view>
 
       <view class="chat-input-shell">
-        <view class="header-icon-button header-icon-button--ghost" bindtap="handleToggleEmojiPicker" hover-class="button-pressed">
-          <oc-icon name="smile" tone="dark" size="40rpx" />
-        </view>
-        <view class="header-icon-button header-icon-button--ghost" bindtap="handleChooseImage" hover-class="button-pressed">
-          <text class="chat-media-icon">📷</text>
+        <view class="chat-input-plus" bindtap="handleToggleAttachMenu" hover-class="button-pressed">
+          <text class="chat-input-plus__icon {{showAttachMenu ? 'chat-input-plus__icon--open' : ''}}">＋</text>
         </view>
         <input class="chat-input" value="{{inputValue}}" placeholder="输入消息..." placeholder-style="color: rgba(45, 52, 54, 0.35);" bindinput="handleMessageInput" confirm-type="send" bindconfirm="handleSendMessage" />
         <block wx:if="{{inputValue}}">
@@ -156,6 +155,28 @@
             <text class="chat-media-icon">{{isRecording ? '⏹' : '🎙'}}</text>
           </view>
         </block>
+      </view>
+
+      <!-- Attach menu -->
+      <view wx:if="{{showAttachMenu}}" class="attach-menu">
+        <view class="attach-menu__item" bindtap="handleChooseImage" hover-class="button-pressed">
+          <view class="attach-menu__icon-wrap attach-menu__icon-wrap--blue">
+            <text class="attach-menu__icon">📷</text>
+          </view>
+          <text class="attach-menu__label">相册</text>
+        </view>
+        <view class="attach-menu__item" bindtap="handleToggleEmojiPicker" hover-class="button-pressed">
+          <view class="attach-menu__icon-wrap attach-menu__icon-wrap--orange">
+            <text class="attach-menu__icon">😊</text>
+          </view>
+          <text class="attach-menu__label">表情</text>
+        </view>
+        <view class="attach-menu__item" bindtap="handleVoiceRecord" hover-class="button-pressed">
+          <view class="attach-menu__icon-wrap attach-menu__icon-wrap--green">
+            <text class="attach-menu__icon">🎙</text>
+          </view>
+          <text class="attach-menu__label">语音</text>
+        </view>
       </view>
     </view>
   </view>

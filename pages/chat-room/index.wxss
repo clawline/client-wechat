@@ -225,3 +225,65 @@
   color: var(--color-text-muted);
   font-style: italic;
 }
+
+/* ── Plus button & Attach menu ── */
+.chat-input-plus {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-input-plus__icon {
+  font-size: 38rpx;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.chat-input-plus__icon--open {
+  transform: rotate(45deg);
+  color: var(--color-primary);
+}
+
+.attach-menu {
+  display: flex;
+  justify-content: flex-start;
+  gap: 40rpx;
+  padding: 20rpx 24rpx 8rpx;
+  animation: attachSlide 0.2s ease;
+}
+
+.attach-menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.attach-menu__icon-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attach-menu__icon-wrap--blue { background: rgba(91, 141, 239, 0.1); }
+.attach-menu__icon-wrap--orange { background: rgba(239, 90, 35, 0.1); }
+.attach-menu__icon-wrap--green { background: rgba(103, 184, 139, 0.1); }
+
+.attach-menu__icon { font-size: 38rpx; }
+
+.attach-menu__label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+@keyframes attachSlide {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}

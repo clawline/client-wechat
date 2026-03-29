@@ -26,6 +26,7 @@ Page({
     activeServerName: '',
     wsStatus: 'disconnected',
     loading: true,
+    viewMode: 'grid',
   },
 
   onLoad() {
@@ -155,6 +156,10 @@ Page({
 
   handlePlusAction() {
     navigateToScreen('pairing');
+  },
+
+  handleToggleView() {
+    this.setData({ viewMode: this.data.viewMode === 'grid' ? 'list' : 'grid' });
   },
 
   handleRefreshAgents() {

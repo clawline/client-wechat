@@ -5,6 +5,8 @@ Component({
     message: { type: Object, value: {} },
     messages: { type: Array, value: [] },
     agentEmoji: { type: String, value: '🤖' },
+    agentName: { type: String, value: '' },
+    grouped: { type: Boolean, value: false },
     isActive: { type: Boolean, value: false },
     delay: { type: Number, value: 0 },
   },

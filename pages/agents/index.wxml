@@ -4,6 +4,9 @@
       <view class="screen-header__row screen-header__row--capsule-safe" style="padding-right: {{capsuleSafeInsetRight}}px;">
         <text class="screen-title">智能体</text>
         <view class="agent-header-actions">
+          <view class="icon-button icon-button--small" bindtap="handleToggleView" hover-class="button-pressed">
+            <text class="agent-view-icon">{{viewMode === 'grid' ? '☰' : '⊞'}}</text>
+          </view>
           <view class="icon-button icon-button--small" bindtap="handleRefreshAgents" hover-class="button-pressed">
             <text class="agent-refresh-icon">🔄</text>
           </view>
@@ -28,42 +31,60 @@
     </view>
 
     <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
-      <view class="chat-list">
-        <!-- Loading state -->
-        <view wx:if="{{loading}}" class="agent-loading">
-          <text class="agent-loading__text">加载中…</text>
-        </view>
+      <!-- Loading -->
+      <view wx:if="{{loading}}" class="agent-loading">
+        <text class="agent-loading__text">加载中…</text>
+      </view>
 
-        <!-- No server -->
-        <view wx:elif="{{!activeServerName}}" class="empty-state">
-          <text class="empty-state__title">未连接服务器</text>
-          <text class="empty-state__desc">请在「设置」中添加服务器</text>
-        </view>
+      <!-- No server -->
+      <view wx:elif="{{!activeServerName}}" class="empty-state">
+        <text class="empty-state__title">未连接服务器</text>
+        <text class="empty-state__desc">请在「设置」中添加服务器</text>
+      </view>
 
-        <!-- Agent list -->
-        <block wx:else>
-          <view
-            wx:for="{{displayedAgents}}"
-            wx:key="id"
-            class="agent-card"
-            style="animation-delay: {{index * 60}}ms;"
-            data-agent-id="{{item.id}}"
-            bindtap="handleAgentTap"
-            hover-class="agent-card--pressed"
-          >
-            <view class="agent-card__avatar">
-              <text class="agent-card__emoji">{{item.identityEmoji || '🤖'}}</text>
-            </view>
-            <view class="agent-card__body">
-              <view class="agent-card__head">
-                <text class="agent-card__name">{{item.name}}</text>
-                <text wx:if="{{item.isDefault}}" class="agent-card__badge">默认</text>
-              </view>
-              <text class="agent-card__model">{{item.model || '智能体: ' + item.id}}</text>
-            </view>
+      <!-- Grid view -->
+      <view wx:elif="{{viewMode === 'grid'}}" class="agent-grid">
+        <view
+          wx:for="{{displayedAgents}}"
+          wx:key="id"
+          class="agent-grid-card"
+          style="animation-delay: {{index * 40}}ms;"
+          data-agent-id="{{item.id}}"
+          bindtap="handleAgentTap"
+          hover-class="agent-grid-card--pressed"
+        >
+          <view class="agent-grid-card__avatar">
+            <text class="agent-grid-card__emoji">{{item.identityEmoji || '🤖'}}</text>
           </view>
-          <view wx:if="{{!displayedAgents.length}}" class="empty-state">暂无智能体</view>
-        </block>
+          <text class="agent-grid-card__name">{{item.name}}</text>
+          <text wx:if="{{item.isDefault}}" class="agent-grid-card__badge">默认</text>
+        </view>
+        <view wx:if="{{!displayedAgents.length}}" class="empty-state">暂无智能体</view>
+      </view>
+
+      <!-- List view -->
+      <view wx:else class="chat-list">
+        <view
+          wx:for="{{displayedAgents}}"
+          wx:key="id"
+          class="agent-card"
+          style="animation-delay: {{index * 60}}ms;"
+          data-agent-id="{{item.id}}"
+          bindtap="handleAgentTap"
+          hover-class="agent-card--pressed"
+        >
+          <view class="agent-card__avatar">
+            <text class="agent-card__emoji">{{item.identityEmoji || '🤖'}}</text>
+          </view>
+          <view class="agent-card__body">
+            <view class="agent-card__head">
+              <text class="agent-card__name">{{item.name}}</text>
+              <text wx:if="{{item.isDefault}}" class="agent-card__badge">默认</text>
+            </view>
+            <text class="agent-card__model">{{item.model || '智能体: ' + item.id}}</text>
+          </view>
+        </view>
+        <view wx:if="{{!displayedAgents.length}}" class="empty-state">暂无智能体</view>
       </view>
     </scroll-view>
   </view>

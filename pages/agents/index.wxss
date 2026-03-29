@@ -117,3 +117,76 @@
   from { opacity: 0; transform: translateY(20rpx); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Grid view ── */
+.agent-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+}
+
+.agent-grid-card {
+  width: calc(33.33% - 12rpx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx 8rpx;
+  border-radius: var(--radius-20);
+  background: var(--color-card);
+  border: 2rpx solid var(--color-border);
+  animation: cardIn 0.25s ease both;
+  position: relative;
+}
+
+.agent-grid-card--pressed {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.agent-grid-card__avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-deep));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12rpx 24rpx rgba(103, 184, 139, 0.18);
+}
+
+.agent-grid-card__emoji {
+  font-size: 36rpx;
+}
+
+.agent-grid-card__name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.agent-grid-card__badge {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  font-size: 18rpx;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+}
+
+.agent-view-icon {
+  font-size: 28rpx;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.9) translateY(12rpx); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
