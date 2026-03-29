@@ -17,7 +17,7 @@
         <view class="preferences-section">
           <view class="section-caption section-caption--with-icon">
             <oc-icon name="user" tone="dark" size="24rpx" />
-            <text>Personal Info</text>
+            <text>个人信息</text>
           </view>
           <view class="form-card">
             <view class="form-field">
@@ -67,8 +67,8 @@
                 bindchange="handleTemperatureChange"
               />
               <view class="slider-foot">
-                <text>Precise</text>
-                <text>Creative</text>
+                <text>精确</text>
+                <text>创意</text>
               </view>
             </view>
 

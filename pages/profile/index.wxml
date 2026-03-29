@@ -19,7 +19,7 @@
           <view class="section-caption section-caption--with-icon section-caption--between">
             <view class="section-caption__left">
               <oc-icon name="server" tone="dark" size="24rpx" />
-              <text>Servers</text>
+              <text>服务器</text>
             </view>
             <view class="icon-button icon-button--small" bindtap="handleAddServer" hover-class="button-pressed">
               <oc-icon name="plus" tone="green" size="30rpx" />
@@ -61,7 +61,7 @@
         <view class="form-card">
           <view class="section-caption section-caption--with-icon">
             <oc-icon name="bell" tone="dark" size="24rpx" />
-            <text>Message Alerts</text>
+            <text>消息提醒</text>
           </view>
           <view class="profile-notify-copy">
             <text class="profile-notify-title">Foreground alerts are enabled in this build.</text>
@@ -94,7 +94,7 @@
 
         <view class="danger-button" bindtap="handleLogout" hover-class="button-pressed">
           <oc-icon name="log-out" tone="red" size="32rpx" />
-          <text>Log Out</text>
+          <text>退出登录</text>
         </view>
       </view>
     </scroll-view>

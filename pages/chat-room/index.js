@@ -29,12 +29,12 @@ function detectMessageActions(text) {
   var lower = text.toLowerCase();
   if ((lower.includes('/help') || lower.includes('/commands')) && lower.includes('/model') && lower.includes('/status')) {
     return {
-      title: 'Quick Actions',
+      title: '快捷操作',
       options: [
-        { label: 'Status', command: '/status', badge: '' },
-        { label: 'Models', command: '/models', badge: '' },
-        { label: 'New Session', command: '/new', badge: '' },
-        { label: 'Reset', command: '/reset', badge: '' },
+        { label: '状态', command: '/status', badge: '' },
+        { label: '模型', command: '/models', badge: '' },
+        { label: '新对话', command: '/new', badge: '' },
+        { label: '重置', command: '/reset', badge: '' },
       ],
     };
   }
@@ -181,8 +181,8 @@ Page({
     isRecording: false,
     genericSenderId: '',
     genericConnectionStatus: 'disconnected',
-    genericConnectionStatusText: 'Offline',
-    genericConnectionDetail: 'Generic Channel offline',
+    genericConnectionStatusText: '离线',
+    genericConnectionDetail: '离线',
     showDisconnectBanner: false,
     disconnectBannerTone: 'offline',
     disconnectBannerText: '',
@@ -331,15 +331,15 @@ Page({
     var status = (payload && payload.status) || 'disconnected';
     var detail = (payload && payload.detail) || '';
     var banner = { showDisconnectBanner: false, disconnectBannerTone: 'offline', disconnectBannerText: '' };
-    var text = 'Offline';
-    if (status === 'connected') text = 'Connected';
-    if (status === 'connecting') text = 'Connecting';
+    var text = '离线';
+    if (status === 'connected') text = '已连接';
+    if (status === 'connecting') text = '连接中';
     if (status === 'reconnecting') {
-      text = 'Reconnecting';
-      banner = { showDisconnectBanner: true, disconnectBannerTone: 'reconnecting', disconnectBannerText: 'Reconnecting…' };
+      text = '重连中';
+      banner = { showDisconnectBanner: true, disconnectBannerTone: 'reconnecting', disconnectBannerText: '重连中…' };
     }
     if (status === 'disconnected') {
-      banner = { showDisconnectBanner: true, disconnectBannerTone: 'offline', disconnectBannerText: 'Connection lost. Tap to reconnect.' };
+      banner = { showDisconnectBanner: true, disconnectBannerTone: 'offline', disconnectBannerText: '连接已断开，点击重连' };
     }
     this.setData({
       genericConnectionStatus: status,
@@ -557,7 +557,9 @@ Page({
     var data = packet.data || {};
     switch (packet.type) {
       case 'connection.open':
-        this.applyConnectionStatus({ status: 'connected', detail: 'Generic Channel online' });
+        this._streamingAgentId = null;
+        this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
+        this.applyConnectionStatus({ status: 'connected', detail: '已连接' });
         break;
       case 'history.sync': {
         var historyMessages = Array.isArray(data.messages)
@@ -712,14 +714,14 @@ Page({
   },
 
   handleSocketError(message) {
-    this.showError(message || 'Socket connection failed.');
+    this.showError(message || '连接失败');
   },
 
   connectAgentChannel(force) {
     const connection = getConnectionState();
     const activeConn = this.activeConn || getActiveConnection();
     if (!activeConn || !activeConn.serverUrl) {
-      wx.showToast({ title: 'Please configure a server first.', icon: 'none' });
+      wx.showToast({ title: '请先配置服务器', icon: 'none' });
       redirectToScreen('profile');
       return;
     }
@@ -963,13 +965,13 @@ Page({
             deliveryStatus: 'sent',
           });
         } catch (e) {
-          this.showError('Recording failed');
+          this.showError('录音失败');
         }
       });
       this._recorderManager.onError(() => {
         this._isRecording = false;
         this.setData({ isRecording: false });
-        this.showError('Recording failed');
+        this.showError('录音失败');
       });
     }
 

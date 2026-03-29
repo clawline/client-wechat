@@ -25,7 +25,7 @@ Component({
       }
       var text = (quoted.text || '').slice(0, 80);
       if ((quoted.text || '').length > 80) text += '…';
-      this.setData({ replyToText: (quoted.sender === 'user' ? 'You' : 'Bot') + ': ' + text });
+      this.setData({ replyToText: (quoted.sender === 'user' ? '我' : '对方') + ': ' + text });
     },
   },
   data: {
@@ -40,7 +40,7 @@ Component({
       const href = event.currentTarget.dataset.href;
       if (href) {
         wx.setClipboardData({ data: href });
-        wx.showToast({ title: 'Link copied', icon: 'none' });
+        wx.showToast({ title: '链接已复制', icon: 'none' });
       }
     },
     handleEditTap() { this.triggerEvent('editmsg', { messageId: this.properties.message.id }); },

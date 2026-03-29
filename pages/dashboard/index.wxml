@@ -13,7 +13,7 @@
           <view class="section-head">
             <view class="section-head__title">
               <oc-icon name="server" tone="green" size="30rpx" />
-              <text>Channel Status</text>
+              <text>通道状态</text>
             </view>
           </view>
 
@@ -49,7 +49,7 @@
           <view class="section-head">
             <view class="section-head__title">
               <oc-icon name="activity" tone="green" size="30rpx" />
-              <text>Connection Details</text>
+              <text>连接详情</text>
             </view>
           </view>
           <view class="detail-list">

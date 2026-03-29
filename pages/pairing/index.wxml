@@ -17,7 +17,7 @@
         <view class="pairing-hero">
           <view class="pairing-chip">
             <oc-icon name="server" tone="green" size="28rpx" />
-            <text>OpenClaw Connect</text>
+            <text>OpenClaw 连接</text>
           </view>
           <text class="screen-title">Connect Workspace</text>
           <text class="pairing-copy">Paste a URL, scan QR code, or configure manually</text>
@@ -31,7 +31,7 @@
           </view>
           <view class="pairing-tab {{activeTab === 'qr' ? 'pairing-tab--active' : ''}}" data-tab="qr" bindtap="handleTabChange">
             <oc-icon name="search" tone="{{activeTab === 'qr' ? 'white' : 'dark'}}" size="26rpx" />
-            <text>Scan</text>
+            <text>扫码</text>
           </view>
           <view class="pairing-tab {{activeTab === 'manual' ? 'pairing-tab--active' : ''}}" data-tab="manual" bindtap="handleTabChange">
             <oc-icon name="settings" tone="{{activeTab === 'manual' ? 'white' : 'dark'}}" size="26rpx" />
