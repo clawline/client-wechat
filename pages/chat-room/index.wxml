@@ -28,7 +28,7 @@
     <scroll-view class="chat-room-scroll" scroll-y scroll-into-view="{{chatScrollAnchor}}">
       <view class="chat-room-list">
         <view wx:if="{{!messages.length && !showThinkingIndicator}}" class="chat-room-empty">
-          <text class="chat-room-empty__title">Conversation ready</text>
+          <text class="chat-room-empty__title">开始对话</text>
           <text class="chat-room-empty__desc">{{genericConnectionDetail}}</text>
         </view>
 

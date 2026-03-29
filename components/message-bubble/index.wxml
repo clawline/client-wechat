@@ -129,6 +129,7 @@
       <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'sent'}}" class="message-delivery message-delivery--sent">✓</text>
       <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'delivered'}}" class="message-delivery message-delivery--delivered">✓✓</text>
       <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'read'}}" class="message-delivery message-delivery--read">✓✓</text>
+      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'failed'}}" class="message-delivery message-delivery--failed">✕</text>
     </view>
   </view>
 </view>

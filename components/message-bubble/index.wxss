@@ -300,6 +300,10 @@
   color: #5B8DEF;
 }
 
+.message-delivery--failed {
+  color: #E53E3E;
+}
+
 /* Quote reference */
 .md-quote-ref {
   padding: 8rpx 16rpx;

@@ -16,12 +16,12 @@ const { mergeMessagesById } = require('../../utils/message-merge');
 const outbox = require('../../utils/outbox');
 const { humanizeError } = require('../../utils/errors');
 
-const DEFAULT_THINKING_TEXT = 'Thinking';
+const DEFAULT_THINKING_TEXT = '思考中';
 const THINKING_LABELS = [
-  { max: 4000, text: 'Thinking' },
-  { max: 8000, text: 'Analyzing' },
-  { max: 15000, text: 'Putting it together' },
-  { max: Infinity, text: 'Working on it…' },
+  { max: 4000, text: '思考中' },
+  { max: 8000, text: '分析中' },
+  { max: 15000, text: '整理中' },
+  { max: Infinity, text: '仍在处理…' },
 ];
 
 function detectMessageActions(text) {
@@ -196,7 +196,7 @@ Page({
     const agentId = options.agentId || 'main';
     const activeConn = getActiveConnection();
     if (!activeConn) {
-      wx.showToast({ title: 'No server connected.', icon: 'none' });
+      wx.showToast({ title: '未连接服务器，请在设置中配置', icon: 'none', duration: 3000 });
       redirectToScreen('chats');
       return;
     }
@@ -260,6 +260,7 @@ Page({
     if (this._isRecording && this._recorderManager) {
       this._recorderManager.stop();
       this._isRecording = false;
+      this.setData({ isRecording: false });
     }
   },
 
@@ -272,6 +273,7 @@ Page({
     if (this._isRecording && this._recorderManager) {
       this._recorderManager.stop();
       this._isRecording = false;
+      this.setData({ isRecording: false });
     }
     this.teardownGenericChannel(true);
   },
@@ -356,7 +358,7 @@ Page({
     var showFollowUpPill = false;
     var items = [];
     if (last && last.sender === 'ai') {
-      items = ['Explain more', 'Summarize', 'Try again'];
+      items = ['详细解释', '总结一下', '再试一次'];
     } else {
       items = ['/status', '/models', '/help'];
       if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
@@ -389,6 +391,10 @@ Page({
 
   syncMessages(messages) {
     var merged = mergeMessagesById([], messages || []);
+    // Cap in-memory messages at 300 to prevent setData performance degradation
+    if (merged.length > 300) {
+      merged = merged.slice(merged.length - 300);
+    }
     setMessages(this.data.activeConversationId, merged);
 
     // Compute suggestion bar state inline to merge into single setData
@@ -396,7 +402,7 @@ Page({
     var showFollowUpPill = false;
     var items = [];
     if (last && last.sender === 'ai') {
-      items = ['Explain more', 'Summarize', 'Try again'];
+      items = ['详细解释', '总结一下', '再试一次'];
     } else {
       items = ['/status', '/models', '/help'];
       if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
@@ -559,6 +565,59 @@ Page({
           : [];
         this.hideThinkingIndicator();
         this.syncMessages(mergeMessagesById(this.data.messages, historyMessages));
+        break;
+      }
+      case 'text.delta': {
+        var deltaText = data.text;
+        var isDone = data.done;
+        if (isDone) {
+          // Streaming finished — remove streaming placeholder
+          this._streamingAgentId = null;
+          this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
+        } else if (typeof deltaText === 'string') {
+          this.hideThinkingIndicator();
+          var msgs = this.data.messages;
+          var streamIdx = -1;
+          for (var si = 0; si < msgs.length; si++) {
+            if (msgs[si].isStreaming) { streamIdx = si; break; }
+          }
+          if (streamIdx >= 0) {
+            var updated = msgs.slice();
+            updated[streamIdx] = Object.assign({}, updated[streamIdx], { text: deltaText });
+            this.syncMessages(updated);
+          } else {
+            this.upsertMessage({
+              id: 'streaming-' + Date.now(),
+              sender: 'ai',
+              text: deltaText,
+              isStreaming: true,
+              timestamp: data.timestamp || Date.now(),
+              reactions: [],
+            });
+          }
+        }
+        break;
+      }
+      case 'stream.resume': {
+        var resumeText = data.text;
+        var isComplete = data.isComplete;
+        this._streamingAgentId = null;
+        if (isComplete) {
+          // Stream completed on server — history.sync will deliver final message
+          this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
+        } else if (typeof resumeText === 'string') {
+          this.hideThinkingIndicator();
+          this.syncMessages(
+            this.data.messages.filter(function (m) { return !m.isStreaming; }).concat([{
+              id: 'streaming-' + Date.now(),
+              sender: 'ai',
+              text: resumeText,
+              isStreaming: true,
+              timestamp: data.startTime || Date.now(),
+              reactions: [],
+            }])
+          );
+        }
         break;
       }
       case 'message.send': {
@@ -740,8 +799,13 @@ Page({
     try {
       payload = replyTo && replyTo.id ? this.genericClient.sendTextWithParent(text, replyTo.id) : this.genericClient.sendText(text);
     } catch (e) {
-      this.syncMessages(this.data.messages.filter(function (msg) { return msg.id !== localId; }));
-      return this.enqueueOfflineText(text, replyTo);
+      // Send failed — mark message as failed (keep visible) and enqueue for retry
+      this.syncMessages(this.data.messages.map(function (msg) {
+        if (msg.id !== localId) return msg;
+        return Object.assign({}, msg, { deliveryStatus: 'failed' });
+      }));
+      this.enqueueOfflineText(text, replyTo);
+      return false;
     }
 
     const nextMessage = normalizeInboundMessage(payload);
@@ -763,6 +827,12 @@ Page({
   },
 
   handleSendMessage() {
+    // Debounce: prevent rapid double-tap
+    if (this._sendLock) return;
+    this._sendLock = true;
+    var self = this;
+    setTimeout(function () { self._sendLock = false; }, 300);
+
     if (this.data.editingMsg) {
       var editText = String(this.data.inputValue || '').trim();
       if (!editText) return;
