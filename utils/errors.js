@@ -1,3 +1,14 @@
+/**
+ * Error classification and human-friendly message mapping.
+ *
+ * Strategy: code-first → string-fallback.
+ * If the error already has a known code (e.g. from server), we use it directly.
+ * String matching is the fallback for unstructured errors from wx.* APIs and
+ * WebSocket close reasons, which don't provide error codes.
+ *
+ * @module errors
+ */
+
 const ERROR_TEXT_BY_CODE = {
   NOT_CONNECTED: '连接已断开，请重试',
   SEND_FAILED: '发送失败，请重试',
@@ -27,6 +38,14 @@ function normalizeError(input, source) {
   return classifyError(String(input), '', source);
 }
 
+/**
+ * Classify error by code first, then fall back to string pattern matching.
+ * Order matters: more specific patterns checked before generic ones.
+ * @param {string} rawMessage - Error message text
+ * @param {string} rawCode - Error code (if available)
+ * @param {string} source - Error source identifier
+ * @returns {{ code: string, message: string, source: string }}
+ */
 function classifyError(rawMessage, rawCode, source) {
   const message = String(rawMessage || '').trim();
   const codeText = String(rawCode || '').trim().toUpperCase();

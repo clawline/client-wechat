@@ -1,5 +1,16 @@
+/**
+ * Offline Outbox — queues messages when disconnected, flushes on reconnect.
+ *
+ * Uses an in-memory LRU cache (MAX_CACHE_SIZE entries) backed by wx.setStorageSync.
+ * Each cache key = STORAGE_PREFIX + connectionId + '.' + chatId.
+ *
+ * @module outbox
+ */
+
 const STORAGE_PREFIX = 'openclaw.outbox.';
+/** @type {number} Maximum queued items per connection+chat pair */
 const MAX_OUTBOX_ITEMS = 50;
+/** @type {number} Maximum media payload size in bytes */
 const MAX_MEDIA_SIZE = 1024 * 1024;
 
 // In-memory cache to avoid repeated JSON.parse/stringify on each operation
@@ -25,13 +36,14 @@ function _loadFromStorage(key) {
     const raw = wx.getStorageSync(key);
     const items = raw ? JSON.parse(raw) : [];
     _cache[key] = Array.isArray(items) ? items : [];
-    _cacheOrder.push(key);
-    _evictCache();
   } catch (error) {
     _cache[key] = [];
-    _cacheOrder.push(key);
-    _evictCache();
   }
+  // Move to end of LRU order (remove if exists, then push)
+  var idx = _cacheOrder.indexOf(key);
+  if (idx !== -1) _cacheOrder.splice(idx, 1);
+  _cacheOrder.push(key);
+  _evictCache();
   return _cache[key];
 }
 
