@@ -257,6 +257,10 @@ Page({
     this.clearSuggestionTimer();
     this.clearThinkingTimer();
     if (this._typingTimeout) clearTimeout(this._typingTimeout);
+    if (this._isRecording && this._recorderManager) {
+      this._recorderManager.stop();
+      this._isRecording = false;
+    }
   },
 
   onUnload() {
@@ -442,18 +446,25 @@ Page({
       var skills = JSON.parse(raw);
       if (!Array.isArray(skills) || !skills.length) return;
       var catalog = clone(this.data.slashCommandCatalog);
+      var existingIds = {};
+      catalog.forEach(function (c) { existingIds[c.id] = true; });
+      var added = 0;
       skills.forEach(function (skill) {
         if (!skill || !skill.name) return;
         var id = 'skill-' + skill.name;
-        if (catalog.some(function (c) { return c.id === id; })) return;
+        if (existingIds[id]) return;
+        existingIds[id] = true;
         catalog.push({
           id: id,
           icon: 'zap',
           label: '/skill:' + skill.name,
           desc: skill.description || skill.name,
         });
+        added++;
       });
-      this.setData({ slashCommandCatalog: catalog, slashCommands: catalog });
+      if (added > 0) {
+        this.setData({ slashCommandCatalog: catalog, slashCommands: catalog });
+      }
     } catch (e) {
       // Skills loading is optional — fail silently
     }
@@ -568,7 +579,19 @@ Page({
       case 'thinking.end':
         this.hideThinkingIndicator();
         break;
-      // status.delivered / status.read: 待联调确认后启用
+      // Delivery status updates — handler ready, waiting for server to emit these events
+      case 'status.delivered':
+      case 'status.read': {
+        var statusMsgId = data.messageId;
+        var newStatus = packet.type === 'status.read' ? 'read' : 'delivered';
+        if (statusMsgId) {
+          this.syncMessages(this.data.messages.map(function (m) {
+            if (m.id !== statusMsgId) return m;
+            return Object.assign({}, m, { deliveryStatus: newStatus });
+          }));
+        }
+        break;
+      }
       case 'reaction.add':
       case 'reaction.remove': {
         var rid = data.messageId;
@@ -762,28 +785,34 @@ Page({
       count: 1,
       mediaType: ['image'],
       success: (res) => {
-        if (res.tempFiles && res.tempFiles.length) {
-          var file = res.tempFiles[0];
-          try {
-            var payload = this.genericClient.sendMedia({
-              mediaUrl: file.tempFilePath,
-              messageType: 'image',
-              content: '[Image]',
-            });
-            this.upsertMessage({
-              id: payload.messageId,
-              sender: 'user',
-              text: '[Image]',
-              contentType: 'image',
-              mediaType: 'image',
-              mediaUrl: file.tempFilePath,
-              timestamp: payload.timestamp || Date.now(),
-              reactions: [],
-              deliveryStatus: 'sent',
-            });
-          } catch (e) {
-            this.showError(e);
-          }
+        if (!res.tempFiles || !res.tempFiles.length) return;
+        var file = res.tempFiles[0];
+        if (!file.tempFilePath) return;
+        try {
+          var fs = wx.getFileSystemManager();
+          var base64 = fs.readFileSync(file.tempFilePath, 'base64');
+          var mimeType = file.fileType === 'video' ? 'video/mp4' : 'image/jpeg';
+          var dataUrl = 'data:' + mimeType + ';base64,' + base64;
+          var payload = this.genericClient.sendMedia({
+            mediaUrl: dataUrl,
+            messageType: 'image',
+            content: '[Image]',
+            mimeType: mimeType,
+          });
+          this.upsertMessage({
+            id: payload.messageId,
+            sender: 'user',
+            text: '[Image]',
+            contentType: 'image',
+            mediaType: 'image',
+            mediaUrl: file.tempFilePath,
+            mimeType: mimeType,
+            timestamp: payload.timestamp || Date.now(),
+            reactions: [],
+            deliveryStatus: 'sent',
+          });
+        } catch (e) {
+          this.showError(e);
         }
       },
     });
