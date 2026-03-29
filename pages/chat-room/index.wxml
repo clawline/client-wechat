@@ -86,7 +86,7 @@
               <view class="thinking-dot thinking-dot--2"></view>
               <view class="thinking-dot thinking-dot--3"></view>
             </view>
-            <text class="typing-indicator-text">typing...</text>
+            <text class="typing-indicator-text">输入中...</text>
           </view>
         </view>
 
@@ -123,7 +123,7 @@
       <view wx:if="{{editingMsg}}" class="edit-bar">
         <view class="edit-bar__indicator"></view>
         <view class="edit-bar__content">
-          <text class="edit-bar__label">Editing message</text>
+          <text class="edit-bar__label">编辑消息</text>
           <text class="edit-bar__text">{{editingMsg.text}}</text>
         </view>
         <view class="edit-bar__close" bindtap="handleCancelEdit">✕</view>
@@ -132,7 +132,7 @@
       <view wx:elif="{{replyingTo}}" class="reply-bar">
         <view class="reply-bar__indicator"></view>
         <view class="reply-bar__content">
-          <text class="reply-bar__label">Replying to {{replyingTo.sender === 'user' ? 'yourself' : 'Bot'}}</text>
+          <text class="reply-bar__label">回复 {{replyingTo.sender === 'user' ? '自己' : '对方'}}</text>
           <text class="reply-bar__text">{{replyingTo.text}}</text>
         </view>
         <view class="reply-bar__close" bindtap="handleCancelReply">✕</view>
@@ -145,7 +145,7 @@
         <view class="header-icon-button header-icon-button--ghost" bindtap="handleChooseImage" hover-class="button-pressed">
           <text class="chat-media-icon">📷</text>
         </view>
-        <input class="chat-input" value="{{inputValue}}" placeholder="Message OpenClaw..." placeholder-style="color: rgba(45, 52, 54, 0.35);" bindinput="handleMessageInput" confirm-type="send" bindconfirm="handleSendMessage" />
+        <input class="chat-input" value="{{inputValue}}" placeholder="输入消息..." placeholder-style="color: rgba(45, 52, 54, 0.35);" bindinput="handleMessageInput" confirm-type="send" bindconfirm="handleSendMessage" />
         <block wx:if="{{inputValue}}">
           <view class="chat-send chat-send--active" bindtap="handleSendMessage" hover-class="button-pressed">
             <oc-icon name="send" tone="white" size="34rpx" />

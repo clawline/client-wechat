@@ -12,10 +12,10 @@ const SCREEN_ORDER = [
 const BOTTOM_NAV_SCREENS = ['chats', 'dashboard', 'search', 'profile'];
 
 const NAV_ITEMS = [
-  { id: 'chats', label: 'Chats', icon: 'message-circle' },
-  { id: 'dashboard', label: 'Resources', icon: 'layout-dashboard' },
-  { id: 'search', label: 'Search', icon: 'search' },
-  { id: 'profile', label: 'Profile', icon: 'user' },
+  { id: 'chats', label: '对话', icon: 'message-circle' },
+  { id: 'dashboard', label: '资源', icon: 'layout-dashboard' },
+  { id: 'search', label: '搜索', icon: 'search' },
+  { id: 'profile', label: '设置', icon: 'user' },
 ];
 
 const BACK_TARGETS = {

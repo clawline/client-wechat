@@ -3,9 +3,9 @@
     <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
       <view class="dashboard-body" style="padding-top: {{contentTopInset}}px;">
         <view class="dashboard-header">
-          <text class="screen-title">Resources</text>
+          <text class="screen-title">资源</text>
           <view wx:if="{{activeServerName}}" class="live-pill {{wsStatus === 'connected' ? '' : 'live-pill--offline'}}">
-            {{wsStatus === 'connected' ? 'Live' : 'Offline'}}
+            {{wsStatus === 'connected' ? '在线' : '离线'}}
           </view>
         </view>
 
@@ -19,29 +19,29 @@
 
           <view wx:if="{{channelStatus}}" class="metric-grid">
             <view class="metric-card">
-              <text class="metric-card__label">Mode</text>
+              <text class="metric-card__label">模式</text>
               <text class="metric-card__value">{{channelStatus.mode}}</text>
             </view>
             <view class="metric-card">
-              <text class="metric-card__label">Running</text>
-              <text class="metric-card__value">{{channelStatus.running ? 'Yes' : 'No'}}</text>
+              <text class="metric-card__label">运行中</text>
+              <text class="metric-card__value">{{channelStatus.running ? '是' : '否'}}</text>
             </view>
             <view class="metric-card">
-              <text class="metric-card__label">Active Chats</text>
+              <text class="metric-card__label">活跃会话</text>
               <text class="metric-card__value">{{channelStatus.connectedChatCount}}</text>
             </view>
             <view class="metric-card">
-              <text class="metric-card__label">Connections</text>
+              <text class="metric-card__label">连接数</text>
               <text class="metric-card__value">{{channelStatus.connectedSocketCount}}</text>
             </view>
           </view>
 
           <view wx:elif="{{activeServerName}}" class="dashboard-empty">
-            <text class="dashboard-empty__text">{{wsStatus === 'connected' ? 'Loading status…' : 'Connecting…'}}</text>
+            <text class="dashboard-empty__text">{{wsStatus === 'connected' ? '加载中…' : '连接中…'}}</text>
           </view>
 
           <view wx:else class="dashboard-empty">
-            <text class="dashboard-empty__text">Connect a server to view status</text>
+            <text class="dashboard-empty__text">请连接服务器查看状态</text>
           </view>
         </glass-card>
 
@@ -54,20 +54,20 @@
           </view>
           <view class="detail-list">
             <view class="detail-row">
-              <text class="detail-label">Server</text>
+              <text class="detail-label">服务器</text>
               <text class="detail-value">{{activeServerName}}</text>
             </view>
             <view class="detail-row">
-              <text class="detail-label">Port</text>
+              <text class="detail-label">端口</text>
               <text class="detail-value">{{channelStatus.port}}</text>
             </view>
             <view class="detail-row">
-              <text class="detail-label">Path</text>
+              <text class="detail-label">路径</text>
               <text class="detail-value">{{channelStatus.path}}</text>
             </view>
             <view class="detail-row">
-              <text class="detail-label">This Chat</text>
-              <text class="detail-value">{{channelStatus.currentChatConnectionCount}} conn</text>
+              <text class="detail-label">当前会话</text>
+              <text class="detail-value">{{channelStatus.currentChatConnectionCount}} 连接</text>
             </view>
           </view>
         </glass-card>

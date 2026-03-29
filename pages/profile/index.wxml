@@ -2,7 +2,7 @@
   <view class="screen">
     <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
       <view class="profile-body" style="padding-top: {{contentTopInset}}px;">
-        <text class="screen-title">Profile</text>
+        <text class="screen-title">设置</text>
 
         <view class="profile-head">
           <view class="profile-avatar-placeholder">
@@ -50,10 +50,10 @@
             </view>
           </view>
           <view wx:else class="profile-server-empty">
-            <text class="profile-server-empty__text">No servers connected</text>
+            <text class="profile-server-empty__text">暂无服务器</text>
             <view class="primary-button primary-button--inline primary-button--compact" bindtap="handleAddServer" hover-class="button-pressed">
               <oc-icon name="plus" tone="white" size="28rpx" />
-              <text class="primary-button__label">Add Server</text>
+              <text class="primary-button__label">添加服务器</text>
             </view>
           </view>
         </view>
@@ -64,11 +64,11 @@
             <text>消息提醒</text>
           </view>
           <view class="profile-notify-copy">
-            <text class="profile-notify-title">Foreground alerts are enabled in this build.</text>
-            <text class="profile-notify-desc">For WeChat subscription messages, bind your template IDs first, then grant permission here.</text>
+            <text class="profile-notify-title">前台消息提醒已启用。</text>
+            <text class="profile-notify-desc">如需微信订阅消息，请先绑定模板 ID，再授权。</text>
           </view>
           <view class="primary-button primary-button--inline" bindtap="handleEnableNotifications" hover-class="button-pressed">
-            <text class="primary-button__label">Enable Subscription Alerts</text>
+            <text class="primary-button__label">开启订阅通知</text>
           </view>
         </view>
 
@@ -111,37 +111,37 @@
   <view wx:if="{{editingServer}}" class="edit-modal-mask" bindtap="handleCancelEdit">
     <view class="edit-modal" catchtap="">
       <view class="edit-modal__header">
-        <text class="edit-modal__title">Edit Server</text>
+        <text class="edit-modal__title">编辑服务器</text>
         <view class="edit-modal__close" bindtap="handleCancelEdit">✕</view>
       </view>
       <view class="edit-modal__body">
         <view class="form-field">
-          <text class="form-label">Connection Name</text>
+          <text class="form-label">连接名称</text>
           <input class="form-input" value="{{editForm.name}}" data-field="name" bindinput="handleEditInput" />
         </view>
         <view class="form-field">
-          <text class="form-label">Display Name</text>
+          <text class="form-label">显示名称</text>
           <input class="form-input" value="{{editForm.displayName}}" data-field="displayName" bindinput="handleEditInput" />
         </view>
         <view class="form-field">
-          <text class="form-label">WS URL</text>
+          <text class="form-label">WS 地址</text>
           <input class="form-input" value="{{editForm.serverUrl}}" data-field="serverUrl" bindinput="handleEditInput" />
         </view>
         <view class="form-field">
-          <text class="form-label">Auth Token</text>
+          <text class="form-label">认证令牌</text>
           <input class="form-input" value="{{editForm.token}}" data-field="token" bindinput="handleEditInput" placeholder="gc_user_xxxxxxxxx" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
         </view>
         <view class="form-field">
-          <text class="form-label">Chat ID</text>
+          <text class="form-label">会话 ID</text>
           <input class="form-input" value="{{editForm.chatId}}" data-field="chatId" bindinput="handleEditInput" placeholder="gc-test-main" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
         </view>
         <view class="form-field">
-          <text class="form-label">Sender ID</text>
+          <text class="form-label">发送者 ID</text>
           <input class="form-input" value="{{editForm.senderId}}" data-field="senderId" bindinput="handleEditInput" placeholder="gc-test-main" placeholder-style="color: rgba(45, 52, 54, 0.35);" />
         </view>
       </view>
       <view class="primary-button primary-button--save" bindtap="handleSaveEdit" hover-class="button-pressed">
-        <text class="primary-button__label">Save Changes</text>
+        <text class="primary-button__label">保存/text>
       </view>
     </view>
   </view>
