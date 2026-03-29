@@ -46,5 +46,6 @@ Component({
     handleEditTap() { this.triggerEvent('editmsg', { messageId: this.properties.message.id }); },
     handleDeleteTap() { this.triggerEvent('deletemsg', { messageId: this.properties.message.id }); },
     handleReplyTap() { this.triggerEvent('replymsg', { messageId: this.properties.message.id }); },
+    onRetryTap() { this.triggerEvent('retrymsg', { messageId: this.properties.message.id }); },
   },
 });

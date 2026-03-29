@@ -50,6 +50,7 @@
               bindeditmsg="handleEditMessage"
               binddeletemsg="handleDeleteMessage"
               bindreplymsg="handleStartReply"
+              bindretrymsg="handleRetryMessage"
             />
           </block>
         </block>

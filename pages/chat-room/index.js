@@ -570,11 +570,17 @@ Page({
       case 'text.delta': {
         var deltaText = data.text;
         var isDone = data.done;
+        var deltaAgentId = data.agentId || this.data.activeChatId;
         if (isDone) {
-          // Streaming finished — remove streaming placeholder
-          this._streamingAgentId = null;
-          this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
+          if (!this._streamingAgentId || this._streamingAgentId === deltaAgentId) {
+            this._streamingAgentId = null;
+            this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
+          }
         } else if (typeof deltaText === 'string') {
+          // Agent isolation: ignore deltas from other agents
+          if (this._streamingAgentId && this._streamingAgentId !== deltaAgentId) break;
+          if (!this._streamingAgentId) this._streamingAgentId = deltaAgentId;
+
           this.hideThinkingIndicator();
           var msgs = this.data.messages;
           var streamIdx = -1;
@@ -601,12 +607,17 @@ Page({
       case 'stream.resume': {
         var resumeText = data.text;
         var isComplete = data.isComplete;
+        var resumeAgentId = data.agentId;
+        // Agent isolation
+        if (resumeAgentId && resumeAgentId !== this.data.activeChatId) break;
         this._streamingAgentId = null;
         if (isComplete) {
-          // Stream completed on server — history.sync will deliver final message
           this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
         } else if (typeof resumeText === 'string') {
-          this.hideThinkingIndicator();
+          this.showThinkingIndicator('恢复回复中…');
+          var self = this;
+          setTimeout(function () { self.hideThinkingIndicator(); }, 800);
+          this._streamingAgentId = resumeAgentId || this.data.activeChatId;
           this.syncMessages(
             this.data.messages.filter(function (m) { return !m.isStreaming; }).concat([{
               id: 'streaming-' + Date.now(),
@@ -844,6 +855,24 @@ Page({
       return;
     }
     this.submitTextMessage(this.data.inputValue);
+  },
+
+  /**
+   * Retry a failed message. Tap the red ✕ to re-send.
+   */
+  handleRetryMessage(event) {
+    var msgId = event.detail && event.detail.messageId;
+    if (!msgId) return;
+    var msg = null;
+    for (var i = 0; i < this.data.messages.length; i++) {
+      if (this.data.messages[i].id === msgId) { msg = this.data.messages[i]; break; }
+    }
+    if (!msg || msg.deliveryStatus !== 'failed') return;
+    if (!msg.text) return;
+
+    // Remove the failed message, re-submit
+    this.syncMessages(this.data.messages.filter(function (m) { return m.id !== msgId; }));
+    this.submitTextMessage(msg.text);
   },
 
   handleChooseImage() {
