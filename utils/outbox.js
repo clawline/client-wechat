@@ -2,24 +2,37 @@ const STORAGE_PREFIX = 'openclaw.outbox.';
 const MAX_OUTBOX_ITEMS = 50;
 const MAX_MEDIA_SIZE = 1024 * 1024;
 
+// In-memory cache to avoid repeated JSON.parse/stringify on each operation
+const _cache = {};
+
 function getStorageKey(connectionId, chatId) {
   return STORAGE_PREFIX + String(connectionId || 'default') + '.' + String(chatId || 'default');
 }
 
-function list(connectionId, chatId) {
+function _loadFromStorage(key) {
+  if (_cache[key]) return _cache[key];
   try {
-    const raw = wx.getStorageSync(getStorageKey(connectionId, chatId));
+    const raw = wx.getStorageSync(key);
     const items = raw ? JSON.parse(raw) : [];
-    return Array.isArray(items) ? items : [];
+    _cache[key] = Array.isArray(items) ? items : [];
   } catch (error) {
-    return [];
+    _cache[key] = [];
+  }
+  return _cache[key];
+}
+
+function _saveToStorage(key, items) {
+  const nextItems = Array.isArray(items) ? items.slice(0, MAX_OUTBOX_ITEMS) : [];
+  _cache[key] = nextItems;
+  try {
+    wx.setStorageSync(key, JSON.stringify(nextItems));
+  } catch (e) {
+    // Storage write failed — cache still valid for session
   }
 }
 
-function save(connectionId, chatId, items) {
-  const nextItems = Array.isArray(items) ? items.slice(0, MAX_OUTBOX_ITEMS) : [];
-  wx.setStorageSync(getStorageKey(connectionId, chatId), JSON.stringify(nextItems));
-  return nextItems;
+function list(connectionId, chatId) {
+  return _loadFromStorage(getStorageKey(connectionId, chatId)).slice();
 }
 
 function estimateSize(value) {
@@ -32,11 +45,14 @@ function estimateSize(value) {
 }
 
 function canFlush(connectionId, chatId) {
-  return list(connectionId, chatId).some((item) => item && !item.inFlight);
+  return _loadFromStorage(getStorageKey(connectionId, chatId)).some(function (item) {
+    return item && !item.inFlight;
+  });
 }
 
 function enqueue(connectionId, chatId, item) {
-  const items = list(connectionId, chatId);
+  const key = getStorageKey(connectionId, chatId);
+  const items = _loadFromStorage(key);
   if (items.length >= MAX_OUTBOX_ITEMS) {
     const error = new Error('Offline outbox is full');
     error.code = 'OUTBOX_FULL';
@@ -59,28 +75,35 @@ function enqueue(connectionId, chatId, item) {
   }, item);
 
   items.push(nextItem);
-  save(connectionId, chatId, items);
+  _saveToStorage(key, items);
   return nextItem;
 }
 
 function markInFlight(connectionId, chatId, itemId, inFlight) {
-  const items = list(connectionId, chatId).map((item) => {
+  const key = getStorageKey(connectionId, chatId);
+  const items = _loadFromStorage(key).map(function (item) {
     if (item.id !== itemId) return item;
     return Object.assign({}, item, { inFlight: !!inFlight });
   });
-  save(connectionId, chatId, items);
-  return items.find((item) => item.id === itemId) || null;
+  _saveToStorage(key, items);
+  return items.find(function (item) { return item.id === itemId; }) || null;
 }
 
 function clearInFlight(connectionId, chatId) {
-  const items = list(connectionId, chatId).map((item) => Object.assign({}, item, { inFlight: false }));
-  save(connectionId, chatId, items);
+  const key = getStorageKey(connectionId, chatId);
+  const items = _loadFromStorage(key).map(function (item) {
+    return Object.assign({}, item, { inFlight: false });
+  });
+  _saveToStorage(key, items);
   return items;
 }
 
 function remove(connectionId, chatId, itemId) {
-  const items = list(connectionId, chatId).filter((item) => item.id !== itemId);
-  save(connectionId, chatId, items);
+  const key = getStorageKey(connectionId, chatId);
+  const items = _loadFromStorage(key).filter(function (item) {
+    return item.id !== itemId;
+  });
+  _saveToStorage(key, items);
   return items;
 }
 

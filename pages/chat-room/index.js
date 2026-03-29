@@ -282,7 +282,7 @@ Page({
   startThinkingTimer() {
     this.clearThinkingTimer();
     this._thinkingTimer = setInterval(() => {
-      if (!this.data.showThinkingIndicator) return;
+      if (!this.pageVisible || !this.data.showThinkingIndicator) return;
       this.setData({ thinkingText: getThinkingText(this.data.thinkingStartAt) });
     }, 1000);
   },
@@ -376,9 +376,28 @@ Page({
   syncMessages(messages) {
     var merged = mergeMessagesById([], messages || []);
     setMessages(this.data.activeConversationId, merged);
-    this.setData({ messages: merged, displayMessages: addDateSeparators(merged) }, () => this.scrollChatToBottom());
+
+    // Compute suggestion bar state inline to merge into single setData
+    var last = merged.length ? merged[merged.length - 1] : null;
+    var showFollowUpPill = false;
+    var items = [];
+    if (last && last.sender === 'ai') {
+      items = ['Explain more', 'Summarize', 'Try again'];
+    } else {
+      items = ['/status', '/models', '/help'];
+      if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
+        showFollowUpPill = true;
+      }
+    }
+
+    this.setData({
+      messages: merged,
+      displayMessages: addDateSeparators(merged),
+      showSuggestionBar: !this.data.showSlashMenu && !this.data.showEmojiPicker,
+      suggestionItems: items,
+      showFollowUpPill: showFollowUpPill,
+    }, () => this.scrollChatToBottom());
     this._persistMessages(merged);
-    this.refreshSuggestionBar();
   },
 
   upsertMessage(message) {
@@ -414,9 +433,10 @@ Page({
       createdAt: Date.now(),
       retryCount: 0,
     };
-    var result = outbox.enqueue(item.connectionId, item.chatId, item);
-    if (!result.ok) {
-      this.showError('full');
+    try {
+      outbox.enqueue(item.connectionId, item.chatId, item);
+    } catch (e) {
+      this.showError(e);
       return false;
     }
     this.upsertMessage({
@@ -440,43 +460,60 @@ Page({
     var chatId = this.activeConn.chatId || this.data.activeConversationId;
     var items = outbox.list(connectionId, chatId);
     if (!items.length) return;
-    var item = items[0];
-    if (!outbox.canFlush(connectionId, chatId)) return;
-    outbox.markInFlight(connectionId, chatId, item.id, true);
-    try {
-      var payload = item.parentId ? this.genericClient.sendTextWithParent(item.content, item.parentId) : this.genericClient.sendText(item.content);
-      outbox.remove(connectionId, chatId, item.id);
-      this.syncMessages(this.data.messages.map(function (msg) {
-        if (msg.id === item.id) {
-          return Object.assign({}, msg, {
-            id: payload.messageId || msg.id,
-            timestamp: payload.timestamp || msg.timestamp,
-            deliveryStatus: 'sent',
-          });
-        }
-        return msg;
-      }));
-      this.flushOutbox();
-    } catch (e) {
-      outbox.clearInFlight(connectionId, chatId);
+    var maxFlush = Math.min(items.length, 10);
+    var flushed = 0;
+
+    var self = this;
+    function flushNext() {
+      if (flushed >= maxFlush) return;
+      if (!self.genericClient || !self.genericClient.isOpen()) return;
+      var remaining = outbox.list(connectionId, chatId);
+      if (!remaining.length) return;
+      var item = remaining[0];
+      if (!outbox.canFlush(connectionId, chatId)) return;
+      outbox.markInFlight(connectionId, chatId, item.id, true);
+      try {
+        var payload = item.parentId
+          ? self.genericClient.sendTextWithParent(item.content, item.parentId)
+          : self.genericClient.sendText(item.content);
+        outbox.remove(connectionId, chatId, item.id);
+        self.syncMessages(self.data.messages.map(function (msg) {
+          if (msg.id === item.id) {
+            return Object.assign({}, msg, {
+              id: payload.messageId || msg.id,
+              timestamp: payload.timestamp || msg.timestamp,
+              deliveryStatus: 'sent',
+            });
+          }
+          return msg;
+        }));
+        flushed++;
+        flushNext();
+      } catch (e) {
+        outbox.clearInFlight(connectionId, chatId);
+      }
     }
+
+    flushNext();
   },
 
   handleSocketPacket(packet) {
+    if (!packet || !packet.type) return;
+    var data = packet.data || {};
     switch (packet.type) {
       case 'connection.open':
         this.applyConnectionStatus({ status: 'connected', detail: 'Generic Channel online' });
         break;
       case 'history.sync': {
-        var historyMessages = Array.isArray(packet.data && packet.data.messages)
-          ? packet.data.messages.map(normalizeHistoryMessage)
+        var historyMessages = Array.isArray(data.messages)
+          ? data.messages.map(normalizeHistoryMessage)
           : [];
         this.hideThinkingIndicator();
         this.syncMessages(mergeMessagesById(this.data.messages, historyMessages));
         break;
       }
       case 'message.send': {
-        var nextMessage = normalizeOutboundMessage(packet.data || {});
+        var nextMessage = normalizeOutboundMessage(data);
         this.hideThinkingIndicator();
         this.upsertMessage(nextMessage);
         updateAgentPreview(this.data.activeChatId, nextMessage.text, nextMessage.timestamp);
@@ -485,10 +522,10 @@ Page({
         break;
       }
       case 'thinking.start':
-        this.showThinkingIndicator(packet.data && packet.data.content);
+        this.showThinkingIndicator(data.content);
         break;
       case 'thinking.update':
-        this.showThinkingIndicator(packet.data && packet.data.content);
+        this.showThinkingIndicator(data.content);
         break;
       case 'thinking.end':
         this.hideThinkingIndicator();
@@ -496,8 +533,8 @@ Page({
       // status.delivered / status.read: 待联调确认后启用
       case 'reaction.add':
       case 'reaction.remove': {
-        var rid = packet.data && packet.data.messageId;
-        var emoji = packet.data && packet.data.emoji;
+        var rid = data.messageId;
+        var emoji = data.emoji;
         if (rid && emoji) {
           this.syncMessages(this.data.messages.map(function (m) {
             if (m.id !== rid) return m;
@@ -513,10 +550,9 @@ Page({
         break;
       }
       case 'typing': {
-        var td = packet.data || {};
-        if (td.senderId !== this.data.genericSenderId) {
-          this.setData({ peerTyping: !!td.isTyping });
-          if (td.isTyping) {
+        if (data.senderId !== this.data.genericSenderId) {
+          this.setData({ peerTyping: !!data.isTyping });
+          if (data.isTyping) {
             if (this._typingTimeout) clearTimeout(this._typingTimeout);
             this._typingTimeout = setTimeout(() => this.setData({ peerTyping: false }), 5000);
           }
@@ -524,17 +560,15 @@ Page({
         break;
       }
       case 'message.edit': {
-        var ed = packet.data || {};
-        if (ed.messageId && ed.content) {
+        if (data.messageId && data.content) {
           this.syncMessages(this.data.messages.map(function (m) {
-            return m.id === ed.messageId ? Object.assign({}, m, { text: ed.content }) : m;
+            return m.id === data.messageId ? Object.assign({}, m, { text: data.content }) : m;
           }));
         }
         break;
       }
       case 'message.delete': {
-        var dd = packet.data || {};
-        if (dd.messageId) this.syncMessages(this.data.messages.filter(function (m) { return m.id !== dd.messageId; }));
+        if (data.messageId) this.syncMessages(this.data.messages.filter(function (m) { return m.id !== data.messageId; }));
         break;
       }
       default:
@@ -572,6 +606,7 @@ Page({
       senderName: activeConn.displayName || connection.senderName,
       agentId: this.data.activeChatId,
       token: activeConn.token || '',
+      connectionId: activeConn.id || '',
       onEvent: (packet) => this.handleSocketPacket(packet),
       onStatusChange: (payload) => this.handleSocketStatus(payload),
       onError: (message) => this.handleSocketError(message),
@@ -681,11 +716,31 @@ Page({
   },
 
   handleChooseImage() {
-    wx.showToast({ title: 'Offline outbox only supports text', icon: 'none' });
+    if (!this.genericClient || !this.genericClient.isOpen()) {
+      wx.showToast({ title: '离线状态下暂不支持发送图片', icon: 'none' });
+      return;
+    }
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      success: (res) => {
+        if (res.tempFiles && res.tempFiles.length) {
+          try {
+            this.genericClient.sendMedia(res.tempFiles[0].tempFilePath, 'image');
+          } catch (e) {
+            this.showError(e);
+          }
+        }
+      },
+    });
   },
 
   handleVoiceRecord() {
-    wx.showToast({ title: 'Offline outbox only supports text', icon: 'none' });
+    if (!this.genericClient || !this.genericClient.isOpen()) {
+      wx.showToast({ title: '离线状态下暂不支持发送语音', icon: 'none' });
+      return;
+    }
+    this.setData({ isRecording: !this.data.isRecording });
   },
 
   handleToggleEmojiPicker() {
