@@ -76,7 +76,21 @@ function canFlush(connectionId, chatId) {
   });
 }
 
+/**
+ * Enqueue an offline message for later delivery.
+ * @param {string} connectionId
+ * @param {string} chatId
+ * @param {Object} item - Must have at least { id, kind, content }
+ * @returns {Object} The queued item with retryCount/createdAt/inFlight defaults
+ * @throws {Error} OUTBOX_FULL if queue exceeds MAX_OUTBOX_ITEMS
+ * @throws {Error} MEDIA_TOO_LARGE if non-text payload exceeds MAX_MEDIA_SIZE
+ */
 function enqueue(connectionId, chatId, item) {
+  if (!item || !item.id || !item.kind) {
+    const error = new Error('Invalid outbox item: missing id or kind');
+    error.code = 'INVALID_MESSAGE';
+    throw error;
+  }
   const key = getStorageKey(connectionId, chatId);
   const items = _loadFromStorage(key);
   if (items.length >= MAX_OUTBOX_ITEMS) {
