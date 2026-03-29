@@ -14,7 +14,7 @@ const {
   getActiveConnectionId,
   setActiveConnectionId,
   updateServerConnection,
-} = require('../../utils/clawline');
+} = require('../../utils/generic-channel');
 
 Page({
   data: {

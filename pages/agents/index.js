@@ -5,7 +5,7 @@ const { navigateToScreen, redirectToScreen } = require('../../utils/routes');
 const {
   createGenericChannelClient,
   getActiveConnection,
-} = require('../../utils/clawline');
+} = require('../../utils/generic-channel');
 
 function filterAgents(agents, searchQuery) {
   const normalized = (searchQuery || '').trim().toLowerCase();

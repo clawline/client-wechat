@@ -3,7 +3,17 @@ const MAX_OUTBOX_ITEMS = 50;
 const MAX_MEDIA_SIZE = 1024 * 1024;
 
 // In-memory cache to avoid repeated JSON.parse/stringify on each operation
+// Uses plain object with LRU eviction to stay within memory limits
 const _cache = {};
+const _cacheOrder = [];
+const MAX_CACHE_SIZE = 20;
+
+function _evictCache() {
+  while (_cacheOrder.length > MAX_CACHE_SIZE) {
+    var oldest = _cacheOrder.shift();
+    delete _cache[oldest];
+  }
+}
 
 function getStorageKey(connectionId, chatId) {
   return STORAGE_PREFIX + String(connectionId || 'default') + '.' + String(chatId || 'default');
@@ -15,8 +25,12 @@ function _loadFromStorage(key) {
     const raw = wx.getStorageSync(key);
     const items = raw ? JSON.parse(raw) : [];
     _cache[key] = Array.isArray(items) ? items : [];
+    _cacheOrder.push(key);
+    _evictCache();
   } catch (error) {
     _cache[key] = [];
+    _cacheOrder.push(key);
+    _evictCache();
   }
   return _cache[key];
 }

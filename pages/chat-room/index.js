@@ -9,7 +9,7 @@ const {
   setMessages,
   updateAgentPreview,
 } = require('../../utils/app-state');
-const { createGenericChannelClient, getActiveConnection } = require('../../utils/clawline');
+const { createGenericChannelClient, getActiveConnection } = require('../../utils/generic-channel');
 const { notifyForegroundMessage } = require('../../utils/notifications');
 const { redirectToScreen } = require('../../utils/routes');
 const { mergeMessagesById } = require('../../utils/message-merge');
@@ -248,6 +248,7 @@ Page({
     this.pageVisible = true;
     if (this.data.activeChatId) clearAgentUnread(this.data.activeChatId);
     this.startSuggestionTimer();
+    if (this.data.showThinkingIndicator) this.startThinkingTimer();
   },
 
   onHide() {
@@ -281,8 +282,12 @@ Page({
 
   startThinkingTimer() {
     this.clearThinkingTimer();
+    if (!this.pageVisible) return;
     this._thinkingTimer = setInterval(() => {
-      if (!this.pageVisible || !this.data.showThinkingIndicator) return;
+      if (!this.data.showThinkingIndicator) {
+        this.clearThinkingTimer();
+        return;
+      }
       this.setData({ thinkingText: getThinkingText(this.data.thinkingStartAt) });
     }, 1000);
   },

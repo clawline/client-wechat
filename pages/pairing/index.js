@@ -1,7 +1,7 @@
 const { DEFAULT_PAGE_CHROME, getPageChromeData } = require('../../utils/layout');
 const { getConnectionState, getPreferenceForm, saveConnectionState, updatePreferenceForm } = require('../../utils/app-state');
 const { navigateToScreen } = require('../../utils/routes');
-const { addServerConnection, setActiveConnectionId } = require('../../utils/clawline');
+const { addServerConnection, setActiveConnectionId } = require('../../utils/generic-channel');
 
 /**
  * Parse a connection URL:

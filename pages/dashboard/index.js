@@ -2,7 +2,7 @@ const { getNavItems } = require('../../utils/navigation');
 const { DEFAULT_PAGE_CHROME, getPageChromeData } = require('../../utils/layout');
 const { getConnectionState, getTotalUnread } = require('../../utils/app-state');
 const { redirectToScreen } = require('../../utils/routes');
-const { createGenericChannelClient, getActiveConnection } = require('../../utils/clawline');
+const { createGenericChannelClient, getActiveConnection } = require('../../utils/generic-channel');
 
 Page({
   data: {

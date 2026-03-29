@@ -10,7 +10,7 @@ const {
   buildConversationId,
   getStoredConnectionSettings,
   saveConnectionSettings,
-} = require('./clawline');
+} = require('./generic-channel');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
