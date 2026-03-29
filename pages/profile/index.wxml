@@ -141,7 +141,7 @@
         </view>
       </view>
       <view class="primary-button primary-button--save" bindtap="handleSaveEdit" hover-class="button-pressed">
-        <text class="primary-button__label">保存/text>
+        <text class="primary-button__label">保存</text>
       </view>
     </view>
   </view>
