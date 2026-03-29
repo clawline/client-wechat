@@ -312,8 +312,8 @@ Page({
 
   showError(message) {
     var info = humanizeError(message);
-    var title = 'Error';
-    var body = String(message || 'Something went wrong.');
+    var title = '错误';
+    var body = String(message || '出错了');
     if (typeof info === 'string') {
       body = info;
     } else if (info && info.title) {
@@ -788,7 +788,7 @@ Page({
       var ok = this.enqueueOfflineText(text, replyTo);
       if (ok) {
         this.setData({ inputValue: '', replyingTo: null, showSlashMenu: false, showEmojiPicker: false });
-        this.showError('not connected');
+        this.showError('未连接');
       }
       return ok;
     }

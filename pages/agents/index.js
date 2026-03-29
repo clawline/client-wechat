@@ -87,7 +87,11 @@ Page({
           this.lobbyClient.requestAgentList();
         }
       },
-      onError: () => {},
+      onError: (msg) => {
+        console.error('[Agents] connection error:', msg);
+        this.setData({ loading: false });
+        wx.showToast({ title: msg || '连接失败', icon: 'none', duration: 3000 });
+      },
     });
     this.lobbyClient.connect(true);
 

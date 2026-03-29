@@ -225,7 +225,7 @@ class GenericChannelClient {
 
       const shouldReconnect = this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
       if (!shouldReconnect) {
-        this.updateStatus('disconnected', response.reason || 'Connection closed.');
+        this.updateStatus('disconnected', response.reason || '连接已关闭');
         return;
       }
 
@@ -248,8 +248,10 @@ class GenericChannelClient {
   }
 
   emitError(error, source) {
+    const msg = normalizeError(error, source);
+    console.error('[GenericChannel] error:', msg);
     if (typeof this.onError === 'function') {
-      this.onError(normalizeError(error, source));
+      this.onError(msg);
     }
   }
 
