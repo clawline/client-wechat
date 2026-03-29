@@ -240,6 +240,7 @@ Page({
     });
 
     clearAgentUnread(agentId);
+    this._loadSkillsIntoCatalog();
     this.connectAgentChannel(true);
     this.startSuggestionTimer();
   },
@@ -264,6 +265,10 @@ Page({
     this.clearThinkingTimer();
     if (this._typingTimeout) clearTimeout(this._typingTimeout);
     if (this._errorToastTimer) clearTimeout(this._errorToastTimer);
+    if (this._isRecording && this._recorderManager) {
+      this._recorderManager.stop();
+      this._isRecording = false;
+    }
     this.teardownGenericChannel(true);
   },
 
@@ -423,6 +428,34 @@ Page({
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
+    }
+  },
+
+  /**
+   * Load cached skills from storage and merge into slash command catalog.
+   * Skills are stored as { name, description } and shown as /skill:<name>.
+   */
+  _loadSkillsIntoCatalog() {
+    try {
+      var raw = wx.getStorageSync('openclaw.skills');
+      if (!raw) return;
+      var skills = JSON.parse(raw);
+      if (!Array.isArray(skills) || !skills.length) return;
+      var catalog = clone(this.data.slashCommandCatalog);
+      skills.forEach(function (skill) {
+        if (!skill || !skill.name) return;
+        var id = 'skill-' + skill.name;
+        if (catalog.some(function (c) { return c.id === id; })) return;
+        catalog.push({
+          id: id,
+          icon: 'zap',
+          label: '/skill:' + skill.name,
+          desc: skill.description || skill.name,
+        });
+      });
+      this.setData({ slashCommandCatalog: catalog, slashCommands: catalog });
+    } catch (e) {
+      // Skills loading is optional — fail silently
     }
   },
 
@@ -730,8 +763,24 @@ Page({
       mediaType: ['image'],
       success: (res) => {
         if (res.tempFiles && res.tempFiles.length) {
+          var file = res.tempFiles[0];
           try {
-            this.genericClient.sendMedia(res.tempFiles[0].tempFilePath, 'image');
+            var payload = this.genericClient.sendMedia({
+              mediaUrl: file.tempFilePath,
+              messageType: 'image',
+              content: '[Image]',
+            });
+            this.upsertMessage({
+              id: payload.messageId,
+              sender: 'user',
+              text: '[Image]',
+              contentType: 'image',
+              mediaType: 'image',
+              mediaUrl: file.tempFilePath,
+              timestamp: payload.timestamp || Date.now(),
+              reactions: [],
+              deliveryStatus: 'sent',
+            });
           } catch (e) {
             this.showError(e);
           }
@@ -745,7 +794,60 @@ Page({
       wx.showToast({ title: '离线状态下暂不支持发送语音', icon: 'none' });
       return;
     }
-    this.setData({ isRecording: !this.data.isRecording });
+
+    if (this._isRecording) {
+      this._recorderManager.stop();
+      return;
+    }
+
+    if (!this._recorderManager) {
+      this._recorderManager = wx.getRecorderManager();
+      this._recorderManager.onStop((res) => {
+        this._isRecording = false;
+        this.setData({ isRecording: false });
+        var fs = wx.getFileSystemManager();
+        try {
+          var base64 = fs.readFileSync(res.tempFilePath, 'base64');
+          var dataUrl = 'data:audio/aac;base64,' + base64;
+
+          if (!this.genericClient || !this.genericClient.isOpen()) {
+            wx.showToast({ title: '连接已断开', icon: 'none' });
+            return;
+          }
+
+          var payload = this.genericClient.sendMedia({
+            messageType: 'voice',
+            content: '[Voice]',
+            mediaUrl: dataUrl,
+            mimeType: 'audio/aac',
+          });
+
+          this.upsertMessage({
+            id: payload.messageId,
+            sender: 'user',
+            text: '[Voice]',
+            contentType: 'voice',
+            mediaType: 'voice',
+            mediaUrl: dataUrl,
+            mimeType: 'audio/aac',
+            timestamp: payload.timestamp || Date.now(),
+            reactions: [],
+            deliveryStatus: 'sent',
+          });
+        } catch (e) {
+          this.showError('Recording failed');
+        }
+      });
+      this._recorderManager.onError(() => {
+        this._isRecording = false;
+        this.setData({ isRecording: false });
+        this.showError('Recording failed');
+      });
+    }
+
+    this._isRecording = true;
+    this.setData({ isRecording: true });
+    this._recorderManager.start({ format: 'aac', duration: 60000 });
   },
 
   handleToggleEmojiPicker() {

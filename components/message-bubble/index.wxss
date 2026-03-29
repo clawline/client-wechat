@@ -281,7 +281,19 @@
 .message-delivery {
   font-size: 20rpx;
   color: var(--color-text-muted);
-  text-transform: lowercase;
+  margin-left: 8rpx;
+}
+
+.message-delivery--pending {
+  color: #999;
+}
+
+.message-delivery--sent {
+  color: var(--color-text-muted);
+}
+
+.message-delivery--delivered {
+  color: #5B8DEF;
 }
 
 .message-delivery--read {

@@ -125,7 +125,10 @@
 
     <view wx:if="{{message.formattedTime}}" class="message-time-row {{message.sender === 'user' ? 'message-time-row--user' : 'message-time-row--ai'}}">
       <text class="message-time {{message.sender === 'user' ? 'message-time--user' : 'message-time--ai'}}">{{message.formattedTime}}</text>
-      <text wx:if="{{message.sender === 'user' && message.deliveryStatus}}" class="message-delivery message-delivery--{{message.deliveryStatus}}">{{message.deliveryStatus}}</text>
+      <text wx:if="{{message.sender === 'user' && message.deliveryStatus === 'pending'}}" class="message-delivery message-delivery--pending">○</text>
+      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'sent'}}" class="message-delivery message-delivery--sent">✓</text>
+      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'delivered'}}" class="message-delivery message-delivery--delivered">✓✓</text>
+      <text wx:elif="{{message.sender === 'user' && message.deliveryStatus === 'read'}}" class="message-delivery message-delivery--read">✓✓</text>
     </view>
   </view>
 </view>
