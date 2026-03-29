@@ -160,10 +160,34 @@ class GenericChannelClient {
     const nextStatus = this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting';
     this.updateStatus(nextStatus);
 
-    const socketTask = wx.connectSocket({
-      url: buildSocketUrl(this.serverUrl, this.chatId, this.agentId, this.authToken),
-      timeout: 10000,
-    });
+    const finalUrl = buildSocketUrl(this.serverUrl, this.chatId, this.agentId, this.authToken);
+    console.log('[GenericChannel] connecting to:', finalUrl);
+
+    let socketTask;
+    try {
+      socketTask = wx.connectSocket({
+        url: finalUrl,
+        timeout: 10000,
+        fail: (err) => {
+          console.error('[GenericChannel] wx.connectSocket fail:', JSON.stringify(err));
+          if (this.connectionToken !== token) return;
+          this.socketTask = null;
+          this.emitError(err, 'connect');
+          // Trigger reconnect via status update
+          this.updateStatus('disconnected', (err && err.errMsg) || '连接失败');
+        },
+      });
+    } catch (e) {
+      console.error('[GenericChannel] wx.connectSocket threw:', e);
+      this.updateStatus('disconnected', '连接异常');
+      return;
+    }
+
+    if (!socketTask) {
+      console.error('[GenericChannel] wx.connectSocket returned falsy');
+      this.updateStatus('disconnected', '连接失败');
+      return;
+    }
 
     this.socketTask = socketTask;
 
