@@ -5,6 +5,8 @@ const { navigateToScreen, redirectToScreen } = require('../../utils/routes');
 const {
   createGenericChannelClient,
   getActiveConnection,
+  getServerConnections,
+  setActiveConnectionId,
 } = require('../../utils/generic-channel');
 
 function filterAgents(agents, searchQuery) {
@@ -34,7 +36,8 @@ Page({
       ...getPageChromeData(),
       navItems: getNavItems(getTotalUnread()),
     });
-    this.lobbyClient = null;
+    this._lobbyClients = {};
+    this._agentsByServer = {};
     this._hasFetched = false;
 
     // Load cached agents immediately
@@ -49,85 +52,117 @@ Page({
 
   onShow() {
     this.setData({ navItems: getNavItems(getTotalUnread()), darkMode: getPageChromeData().darkMode });
-    // Only fetch from server on first show or manual refresh
     if (!this._hasFetched) {
-      this.connectAndFetchAgents();
+      this.connectAllServers();
       this._hasFetched = true;
     }
   },
 
   onHide() {
-    this.teardownLobby();
+    this.teardownAllLobbies();
   },
 
   onUnload() {
-    this.teardownLobby();
+    this.teardownAllLobbies();
   },
 
-  connectAndFetchAgents() {
-    this.teardownLobby();
-    const activeConn = getActiveConnection();
-    if (!activeConn) {
+  connectAllServers() {
+    this.teardownAllLobbies();
+    const connections = getServerConnections();
+    if (!connections.length) {
       this.setData({ loading: false, agents: [], displayedAgents: [], activeServerName: '' });
       return;
     }
 
-    const connection = getConnectionState();
-    this.setData({ activeServerName: activeConn.name, loading: true });
-
-    this.lobbyClient = createGenericChannelClient({
-      serverUrl: activeConn.serverUrl,
-      chatId: activeConn.chatId || ('openclaw-mini-lobby-' + activeConn.id),
-      senderId: activeConn.senderId || connection.senderId,
-      senderName: activeConn.displayName || connection.senderName,
-      token: activeConn.token || '',
-      onEvent: (packet) => this.handleLobbyPacket(packet),
-      onStatusChange: (payload) => {
-        this.setData({ wsStatus: payload.status });
-        if (payload.status === 'connected' && this.lobbyClient) {
-          this.lobbyClient.requestAgentList();
-        }
-      },
-      onError: (msg) => {
-        console.error('[Agents] connection error:', msg);
-        this.setData({ loading: false });
-        wx.showToast({ title: msg || '连接失败', icon: 'none', duration: 3000 });
-      },
+    // Show all server names
+    var serverNames = connections.map(function (c) { return c.name || c.displayName || '服务器'; });
+    this.setData({
+      activeServerName: serverNames.join(' · '),
+      loading: true,
     });
-    this.lobbyClient.connect(true);
+
+    var self = this;
+    var connState = getConnectionState();
+
+    connections.forEach(function (conn) {
+      self._agentsByServer[conn.id] = [];
+
+      var client = createGenericChannelClient({
+        serverUrl: conn.serverUrl,
+        chatId: conn.chatId || ('openclaw-mini-lobby-' + conn.id),
+        senderId: conn.senderId || connState.senderId,
+        senderName: conn.displayName || connState.senderName,
+        token: conn.token || '',
+        onEvent: function (packet) { self.handleLobbyPacket(conn.id, conn.name || conn.displayName, packet); },
+        onStatusChange: function (payload) {
+          if (payload.status === 'connected' && self._lobbyClients[conn.id]) {
+            self._lobbyClients[conn.id].requestAgentList();
+          }
+        },
+        onError: function (msg) {
+          console.error('[Agents] ' + conn.name + ' error:', msg);
+        },
+      });
+
+      self._lobbyClients[conn.id] = client;
+      client.connect(true);
+    });
 
     // Fallback timeout
-    this._agentTimeout = setTimeout(() => {
-      if (this.data.agents.length === 0) {
-        const fallback = [{ id: 'main', name: 'Main', isDefault: true, identityEmoji: '🤖' }];
-        this.setData({ agents: fallback, displayedAgents: fallback, loading: false });
+    this._agentTimeout = setTimeout(function () {
+      if (self.data.agents.length === 0) {
+        var fallback = [{ id: 'main', name: 'Main', isDefault: true, identityEmoji: '🤖' }];
+        self.setData({ agents: fallback, displayedAgents: fallback, loading: false });
       }
     }, 5000);
   },
 
-  handleLobbyPacket(packet) {
-    if (packet.type === 'connection.open' && this.lobbyClient) {
-      this.lobbyClient.requestAgentList();
+  handleLobbyPacket(connId, connName, packet) {
+    if (packet.type === 'connection.open' && this._lobbyClients[connId]) {
+      this._lobbyClients[connId].requestAgentList();
     }
     if (packet.type === 'agent.list' && packet.data && Array.isArray(packet.data.agents)) {
       if (this._agentTimeout) { clearTimeout(this._agentTimeout); this._agentTimeout = null; }
-      const agents = packet.data.agents;
-      this.setData({
-        agents,
-        displayedAgents: filterAgents(agents, this.data.searchQuery),
-        loading: false,
+
+      // Tag each agent with its source server
+      var tagged = packet.data.agents.map(function (a) {
+        return Object.assign({}, a, { _connId: connId, _serverName: connName || '服务器' });
       });
-      // Cache for ChatRoom to read
-      try { wx.setStorageSync('openclaw.agentList', JSON.stringify(agents)); } catch (e) {}
+      this._agentsByServer[connId] = tagged;
+
+      // Merge all servers' agents
+      this._rebuildAgentList();
     }
   },
 
-  teardownLobby() {
+  _rebuildAgentList() {
+    var all = [];
+    var self = this;
+    var connections = getServerConnections();
+    connections.forEach(function (conn) {
+      var serverAgents = self._agentsByServer[conn.id] || [];
+      all = all.concat(serverAgents);
+    });
+
+    this.setData({
+      agents: all,
+      displayedAgents: filterAgents(all, this.data.searchQuery),
+      loading: false,
+    });
+
+    // Cache for ChatRoom
+    try { wx.setStorageSync('openclaw.agentList', JSON.stringify(all)); } catch (e) {}
+  },
+
+  teardownAllLobbies() {
     if (this._agentTimeout) { clearTimeout(this._agentTimeout); this._agentTimeout = null; }
-    if (this.lobbyClient) {
-      this.lobbyClient.close(true);
-      this.lobbyClient = null;
-    }
+    var self = this;
+    Object.keys(this._lobbyClients || {}).forEach(function (id) {
+      if (self._lobbyClients[id]) {
+        self._lobbyClients[id].close(true);
+      }
+    });
+    this._lobbyClients = {};
   },
 
   handleNavigate(event) {
@@ -144,13 +179,14 @@ Page({
     });
   },
 
-  handleOpenChat(event) {
-    const { chatId } = event.detail;
-    navigateToScreen('chat_room', { agentId: chatId });
-  },
-
   handleAgentTap(event) {
     const agentId = event.currentTarget.dataset.agentId;
+    // Find which server this agent belongs to
+    var agent = this.data.agents.find(function (a) { return a.id === agentId; });
+    if (agent && agent._connId) {
+      // Switch active connection to the agent's server
+      setActiveConnectionId(agent._connId);
+    }
     navigateToScreen('chat_room', { agentId });
   },
 
@@ -164,6 +200,6 @@ Page({
 
   handleRefreshAgents() {
     this._hasFetched = false;
-    this.connectAndFetchAgents();
+    this.connectAllServers();
   },
 });
