@@ -48,10 +48,29 @@ function parseQueryParams(urlStr, serverUrlOverride) {
   return {
     serverUrl: serverUrlOverride || params.serverUrl || '',
     token: params.token || '',
-    chatId: params.chatId || '',
+    chatId: params.chatId || params.channelId || '',
     senderId: params.senderId || '',
     displayName: params.name || '',
   };
+}
+
+// Extract a friendly name from hostname:
+//   relay.restry.cn → Relay
+//   gw.dev.dora.restry.cn → Gw Dev Dora
+//   192.168.1.1 → 192.168.1.1
+function friendlyName(hostname) {
+  if (!hostname) return 'Server';
+  // If it's an IP address, return as-is
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return hostname;
+  // Take the subdomain part(s) before the registrable domain
+  var parts = hostname.split('.');
+  // For "relay.restry.cn" → take "relay"; for "gw.dev.dora.restry.cn" → take "gw.dev.dora"
+  // Simple heuristic: drop last 2 parts (TLD + domain), capitalize the rest
+  if (parts.length <= 2) return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  var meaningful = parts.slice(0, -2);
+  return meaningful.map(function (p) {
+    return p.charAt(0).toUpperCase() + p.slice(1);
+  }).join(' ');
 }
 
 Page({
@@ -102,7 +121,7 @@ Page({
       var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
       hostname = match ? match[1] : 'Server';
     } catch (e) { hostname = 'Server'; }
-    var connName = parsed.displayName || hostname;
+    var connName = parsed.displayName || friendlyName(hostname);
 
     saveConnectionState({
       displayName: connName,
@@ -140,7 +159,7 @@ Page({
             var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
             hostname = match ? match[1] : 'Server';
           } catch (e) { hostname = 'Server'; }
-          var connName = parsed.displayName || hostname;
+          var connName = parsed.displayName || friendlyName(hostname);
 
           saveConnectionState({
             displayName: connName,
