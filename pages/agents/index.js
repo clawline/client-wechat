@@ -26,10 +26,12 @@ Page({
     searchQuery: '',
     agents: [],
     displayedAgents: [],
+    serverGroups: [],       // [{ serverId, serverName, agents: [] }]
     activeServerName: '',
     wsStatus: 'disconnected',
     loading: true,
     viewMode: 'grid',
+    multiServer: false,     // true when >1 server connected
   },
 
   onLoad() {
@@ -75,10 +77,11 @@ Page({
       return;
     }
 
-    // Show all server names
+    // Show server names (not URLs)
     var serverNames = connections.map(function (c) { return c.name || c.displayName || '服务器'; });
     this.setData({
       activeServerName: serverNames.join(' · '),
+      multiServer: connections.length > 1,
       loading: true,
     });
 
@@ -158,16 +161,25 @@ Page({
 
   _rebuildAgentList() {
     var all = [];
+    var groups = [];
     var self = this;
     var connections = getServerConnections();
     connections.forEach(function (conn) {
       var serverAgents = self._agentsByServer[conn.id] || [];
       all = all.concat(serverAgents);
+      if (serverAgents.length > 0) {
+        groups.push({
+          serverId: conn.id,
+          serverName: conn.name || conn.displayName || '服务器',
+          agents: filterAgents(serverAgents, self.data.searchQuery),
+        });
+      }
     });
 
     this.setData({
       agents: all,
       displayedAgents: filterAgents(all, this.data.searchQuery),
+      serverGroups: groups,
       loading: false,
     });
 
@@ -193,9 +205,27 @@ Page({
 
   handleSearchInput(event) {
     const searchQuery = event.detail.value || '';
+    var filtered = filterAgents(this.data.agents, searchQuery);
+
+    // Rebuild server groups with filter
+    var self = this;
+    var connections = getServerConnections();
+    var groups = [];
+    connections.forEach(function (conn) {
+      var serverAgents = filterAgents(self._agentsByServer[conn.id] || [], searchQuery);
+      if (serverAgents.length > 0) {
+        groups.push({
+          serverId: conn.id,
+          serverName: conn.name || conn.displayName || '服务器',
+          agents: serverAgents,
+        });
+      }
+    });
+
     this.setData({
       searchQuery,
-      displayedAgents: filterAgents(this.data.agents, searchQuery),
+      displayedAgents: filtered,
+      serverGroups: groups,
     });
   },
 
