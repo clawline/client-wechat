@@ -40,9 +40,11 @@ function parseQueryParams(urlStr, serverUrlOverride) {
   var qs = urlStr.slice(qIdx + 1);
   var params = {};
   qs.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (kv.length === 2) {
-      params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+    var eqIdx = pair.indexOf('=');
+    if (eqIdx > 0) {
+      var key = decodeURIComponent(pair.slice(0, eqIdx).replace(/\+/g, ' '));
+      var val = decodeURIComponent(pair.slice(eqIdx + 1).replace(/\+/g, ' '));
+      params[key] = val;
     }
   });
   return {
@@ -50,7 +52,10 @@ function parseQueryParams(urlStr, serverUrlOverride) {
     token: params.token || '',
     chatId: params.chatId || params.channelId || '',
     senderId: params.senderId || '',
-    displayName: params.name || '',
+    // channelName = server name (e.g. "🪴 Ottor")
+    // displayName = user display name (e.g. "🪴 Ottor/tiger")
+    channelName: params.channelName || '',
+    displayName: params.displayName || params.name || '',
   };
 }
 
@@ -116,12 +121,13 @@ Page({
       this.setData({ urlError: 'Invalid URL. Use ws:// or openclaw:// format.' });
       return;
     }
+    // Priority: channelName > displayName > friendly hostname
     var hostname = '';
     try {
       var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
       hostname = match ? match[1] : 'Server';
     } catch (e) { hostname = 'Server'; }
-    var connName = parsed.displayName || friendlyName(hostname);
+    var connName = parsed.channelName || parsed.displayName || friendlyName(hostname);
 
     saveConnectionState({
       displayName: connName,
@@ -159,7 +165,7 @@ Page({
             var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
             hostname = match ? match[1] : 'Server';
           } catch (e) { hostname = 'Server'; }
-          var connName = parsed.displayName || friendlyName(hostname);
+          var connName = parsed.channelName || parsed.displayName || friendlyName(hostname);
 
           saveConnectionState({
             displayName: connName,
