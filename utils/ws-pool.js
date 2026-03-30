@@ -1,19 +1,9 @@
-/**
- * Global WebSocket connection pool.
- *
- * Keeps WS connections alive across page transitions.  When a page hides/
- * unloads it calls `release(key)` which starts a grace timer (default 15 s).
- * If the same page (or another page) calls `acquire(key)` before the timer
- * fires, the existing connection is reused — no reconnect.
- *
- * Usage:
- *   const client = wsPool.acquire(poolKey, () => createGenericChannelClient({...}));
- *   // on hide / unload:
- *   wsPool.release(poolKey);
- *   // on show (reuse):
- *   const client = wsPool.acquire(poolKey, factoryFn);
- *   if (client.isOpen()) { /* already connected, apply state */ }
- */
+// Global WebSocket connection pool.
+//
+// Keeps WS connections alive across page transitions. When a page hides/
+// unloads it calls release(key) which starts a grace timer (default 15s).
+// If the same page (or another page) calls acquire(key) before the timer
+// fires, the existing connection is reused — no reconnect.
 
 const _pool = {};
 
