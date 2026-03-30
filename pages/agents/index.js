@@ -8,6 +8,7 @@ const {
   getServerConnections,
   setActiveConnectionId,
 } = require('../../utils/generic-channel');
+const wsPool = require('../../utils/ws-pool');
 
 function filterAgents(agents, searchQuery) {
   const normalized = (searchQuery || '').trim().toLowerCase();
@@ -59,15 +60,15 @@ Page({
   },
 
   onHide() {
-    this.teardownAllLobbies();
+    this.releaseAllLobbies();
   },
 
   onUnload() {
-    this.teardownAllLobbies();
+    this.releaseAllLobbies();
   },
 
   connectAllServers() {
-    this.teardownAllLobbies();
+    this.releaseAllLobbies();
     const connections = getServerConnections();
     if (!connections.length) {
       this.setData({ loading: false, agents: [], displayedAgents: [], activeServerName: '' });
@@ -83,16 +84,15 @@ Page({
 
     var self = this;
     var connState = getConnectionState();
+    this._poolKeys = [];
 
     connections.forEach(function (conn) {
       self._agentsByServer[conn.id] = [];
 
-      var client = createGenericChannelClient({
-        serverUrl: conn.serverUrl,
-        chatId: conn.chatId || ('openclaw-mini-lobby-' + conn.id),
-        senderId: conn.senderId || connState.senderId,
-        senderName: conn.displayName || connState.senderName,
-        token: conn.token || '',
+      var poolKey = 'lobby-' + conn.id;
+      self._poolKeys.push(poolKey);
+
+      var callbacks = {
         onEvent: function (packet) { self.handleLobbyPacket(conn.id, conn.name || conn.displayName, packet); },
         onStatusChange: function (payload) {
           if (payload.status === 'connected' && self._lobbyClients[conn.id]) {
@@ -102,10 +102,31 @@ Page({
         onError: function (msg) {
           console.error('[Agents] ' + conn.name + ' error:', msg);
         },
+      };
+
+      var result = wsPool.acquire(poolKey, function () {
+        return createGenericChannelClient({
+          serverUrl: conn.serverUrl,
+          chatId: conn.chatId || ('openclaw-mini-lobby-' + conn.id),
+          senderId: conn.senderId || connState.senderId,
+          senderName: conn.displayName || connState.senderName,
+          token: conn.token || '',
+          onEvent: callbacks.onEvent,
+          onStatusChange: callbacks.onStatusChange,
+          onError: callbacks.onError,
+        });
       });
 
-      self._lobbyClients[conn.id] = client;
-      client.connect(true);
+      self._lobbyClients[conn.id] = result.client;
+
+      if (result.reused) {
+        wsPool.rebind(poolKey, callbacks);
+        if (result.client.isOpen()) {
+          result.client.requestAgentList();
+        }
+      } else {
+        result.client.connect(true);
+      }
     });
 
     // Fallback timeout
@@ -154,15 +175,14 @@ Page({
     try { wx.setStorageSync('openclaw.agentList', JSON.stringify(all)); } catch (e) {}
   },
 
-  teardownAllLobbies() {
+  releaseAllLobbies() {
     if (this._agentTimeout) { clearTimeout(this._agentTimeout); this._agentTimeout = null; }
     var self = this;
-    Object.keys(this._lobbyClients || {}).forEach(function (id) {
-      if (self._lobbyClients[id]) {
-        self._lobbyClients[id].close(true);
-      }
+    (this._poolKeys || []).forEach(function (key) {
+      wsPool.release(key, 15000);
     });
     this._lobbyClients = {};
+    this._poolKeys = [];
   },
 
   handleNavigate(event) {
@@ -199,6 +219,12 @@ Page({
   },
 
   handleRefreshAgents() {
+    // Force refresh — destroy all pool entries
+    (this._poolKeys || []).forEach(function (key) {
+      wsPool.destroy(key);
+    });
+    this._poolKeys = [];
+    this._lobbyClients = {};
     this._hasFetched = false;
     this.connectAllServers();
   },

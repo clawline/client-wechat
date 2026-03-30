@@ -10,6 +10,7 @@ const {
   updateAgentPreview,
 } = require('../../utils/app-state');
 const { createGenericChannelClient, getActiveConnection } = require('../../utils/generic-channel');
+const wsPool = require('../../utils/ws-pool');
 const { notifyForegroundMessage } = require('../../utils/notifications');
 const { redirectToScreen } = require('../../utils/routes');
 const { mergeMessagesById } = require('../../utils/message-merge');
@@ -743,34 +744,58 @@ Page({
       redirectToScreen('profile');
       return;
     }
-    if (this.genericClient && !force) return;
-    if (this.genericClient) {
-      this.genericClient.close(false);
-      this.genericClient = null;
-    }
 
-    this.genericClient = createGenericChannelClient({
-      serverUrl: activeConn.serverUrl,
-      chatId: activeConn.chatId || this.data.activeConversationId,
-      chatType: 'direct',
-      senderId: activeConn.senderId || connection.senderId,
-      senderName: activeConn.displayName || connection.senderName,
-      agentId: this.data.activeChatId,
-      token: activeConn.token || '',
-      connectionId: activeConn.id || '',
+    var poolKey = 'chat-' + (activeConn.id || '') + '-' + this.data.activeChatId;
+    this._poolKey = poolKey;
+
+    var callbacks = {
       onEvent: (packet) => this.handleSocketPacket(packet),
       onStatusChange: (payload) => this.handleSocketStatus(payload),
       onError: (message) => this.handleSocketError(message),
+    };
+
+    var self = this;
+    var result = wsPool.acquire(poolKey, function () {
+      return createGenericChannelClient({
+        serverUrl: activeConn.serverUrl,
+        chatId: activeConn.chatId || self.data.activeConversationId,
+        chatType: 'direct',
+        senderId: activeConn.senderId || connection.senderId,
+        senderName: activeConn.displayName || connection.senderName,
+        agentId: self.data.activeChatId,
+        token: activeConn.token || '',
+        connectionId: activeConn.id || '',
+        onEvent: callbacks.onEvent,
+        onStatusChange: callbacks.onStatusChange,
+        onError: callbacks.onError,
+      });
     });
 
-    this.genericClient.connect(force);
+    this.genericClient = result.client;
+
+    if (result.reused) {
+      // Rebind callbacks to current page instance
+      wsPool.rebind(poolKey, callbacks);
+      // Sync current status
+      this.applyConnectionStatus({ status: this.genericClient.status, detail: '' });
+      // If already connected, re-request history
+      if (this.genericClient.isOpen() && this.data.activeChatId) {
+        this.genericClient.selectAgent(this.data.activeChatId);
+      }
+    } else {
+      this.genericClient.connect(force);
+    }
   },
 
   teardownGenericChannel(manual) {
-    if (this.genericClient) {
-      this.genericClient.close(manual);
-      this.genericClient = null;
+    if (this._poolKey) {
+      if (manual) {
+        // Explicit teardown (e.g. navigating back) — release with grace period
+        wsPool.release(this._poolKey, 15000);
+      }
+      // Don't null genericClient here — pool may still be alive
     }
+    this.genericClient = null;
     this.hideThinkingIndicator();
     this.applyConnectionStatus({ status: 'disconnected' });
   },
@@ -781,6 +806,8 @@ Page({
   },
 
   handleReconnectChat() {
+    // Force reconnect — destroy pool entry and create fresh
+    if (this._poolKey) wsPool.destroy(this._poolKey);
     this.connectAgentChannel(true);
   },
 

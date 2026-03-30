@@ -3,6 +3,7 @@ const { DEFAULT_PAGE_CHROME, getPageChromeData } = require('../../utils/layout')
 const { getConnectionState, getTotalUnread } = require('../../utils/app-state');
 const { redirectToScreen } = require('../../utils/routes');
 const { createGenericChannelClient, getActiveConnection } = require('../../utils/generic-channel');
+const wsPool = require('../../utils/ws-pool');
 
 Page({
   data: {
@@ -47,28 +48,50 @@ Page({
     const connection = getConnectionState();
     this.setData({ activeServerName: activeConn.name });
 
-    this.statusClient = createGenericChannelClient({
-      serverUrl: activeConn.serverUrl,
-      chatId: 'openclaw-mini-dashboard-' + activeConn.id,
-      senderId: connection.senderId,
-      senderName: activeConn.displayName || connection.senderName,
-      onEvent: (packet) => {
+    var poolKey = 'dashboard-' + activeConn.id;
+    this._poolKey = poolKey;
+    var self = this;
+
+    var callbacks = {
+      onEvent: function (packet) {
         if (packet.type === 'connection.open') {
-          this.requestStatus();
+          self.requestStatus();
         }
         if (packet.type === 'channel.status' && packet.data) {
-          this.setData({ channelStatus: packet.data });
+          self.setData({ channelStatus: packet.data });
         }
       },
-      onStatusChange: (payload) => {
-        this.setData({ wsStatus: payload.status });
+      onStatusChange: function (payload) {
+        self.setData({ wsStatus: payload.status });
         if (payload.status === 'connected') {
-          this.requestStatus();
+          self.requestStatus();
         }
       },
-      onError: () => {},
+      onError: function () {},
+    };
+
+    var result = wsPool.acquire(poolKey, function () {
+      return createGenericChannelClient({
+        serverUrl: activeConn.serverUrl,
+        chatId: 'openclaw-mini-dashboard-' + activeConn.id,
+        senderId: connection.senderId,
+        senderName: activeConn.displayName || connection.senderName,
+        onEvent: callbacks.onEvent,
+        onStatusChange: callbacks.onStatusChange,
+        onError: callbacks.onError,
+      });
     });
-    this.statusClient.connect(true);
+
+    this.statusClient = result.client;
+
+    if (result.reused) {
+      wsPool.rebind(poolKey, callbacks);
+      if (this.statusClient.isOpen()) {
+        this.requestStatus();
+      }
+    } else {
+      this.statusClient.connect(true);
+    }
 
     // Refresh every 10s
     this._refreshTimer = setInterval(() => {
@@ -90,10 +113,10 @@ Page({
       clearInterval(this._refreshTimer);
       this._refreshTimer = null;
     }
-    if (this.statusClient) {
-      this.statusClient.close(true);
-      this.statusClient = null;
+    if (this._poolKey) {
+      wsPool.release(this._poolKey, 15000);
     }
+    this.statusClient = null;
   },
 
   handleNavigate(event) {
