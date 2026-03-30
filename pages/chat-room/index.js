@@ -566,7 +566,19 @@ Page({
         this._streamingAgentId = null;
         this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
         this.applyConnectionStatus({ status: 'connected', detail: '已连接' });
+        // Request agent selection → triggers agent.selected → then request history
+        if (this.genericClient && this.data.activeChatId) {
+          this.genericClient.selectAgent(this.data.activeChatId);
+        }
         break;
+      case 'agent.selected': {
+        // Agent confirmed, now request chat history
+        var selectedAgentId = data.agentId || this.data.activeChatId;
+        if (this.genericClient) {
+          this.genericClient.requestHistory(this.data.activeConversationId);
+        }
+        break;
+      }
       case 'history.sync': {
         var historyMessages = Array.isArray(data.messages)
           ? data.messages.map(normalizeHistoryMessage)
