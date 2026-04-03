@@ -64,6 +64,7 @@
 }
 
 .agent-card__avatar {
+  position: relative;
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
@@ -77,6 +78,26 @@
 
 .agent-card__emoji {
   font-size: 44rpx;
+}
+
+.agent-card__crown {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: #F6B93B;
+  border: 3rpx solid #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 10rpx rgba(246, 185, 59, 0.3);
+}
+
+.agent-card__crown-icon {
+  font-size: 18rpx;
+  line-height: 1;
 }
 
 .agent-card__body {
@@ -93,16 +114,8 @@
 
 .agent-card__name {
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
-}
-
-.agent-card__badge {
-  font-size: 20rpx;
-  background: var(--color-border);
-  color: var(--color-text-secondary);
-  padding: 2rpx 12rpx;
-  border-radius: var(--radius-pill);
 }
 
 .agent-card__model {
@@ -116,4 +129,32 @@
 @keyframes cardFadeIn {
   from { opacity: 0; transform: translateY(20rpx); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Disconnected state — visual dimming */
+.agent-card--disconnected {
+  opacity: 0.75;
+}
+
+.agent-status-dot {
+  display: inline-block;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.agent-status-dot--connected {
+  background: var(--color-primary);
+}
+
+.agent-status-dot--disconnected {
+  background: rgba(45, 52, 54, 0.25);
+}
+
+.agent-status-text {
+  font-size: 22rpx;
+  color: rgba(45, 52, 54, 0.35);
+  font-weight: 400;
 }

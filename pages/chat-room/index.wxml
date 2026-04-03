@@ -100,22 +100,26 @@
 
     <floating-panel visible="{{showSlashMenu}}" extraClass="slash-panel" bindclose="handleClosePanels">
       <view class="slash-list">
-        <view
-          wx:for="{{slashCommands}}"
-          wx:key="id"
-          class="slash-item"
-          data-label="{{item.label}}"
-          bindtap="handleSelectCommand"
-          hover-class="slash-item--pressed"
-        >
-          <view class="slash-item__icon">
-            <oc-icon name="{{item.icon}}" tone="green" size="34rpx" />
+        <block wx:for="{{slashSections}}" wx:key="title">
+          <view class="slash-section-title">{{item.title}}</view>
+          <view
+            wx:for="{{item.items}}"
+            wx:for-item="cmd"
+            wx:key="id"
+            class="slash-item"
+            data-label="{{cmd.label}}"
+            bindtap="handleSelectCommand"
+            hover-class="slash-item--pressed"
+          >
+            <view class="slash-item__icon">
+              <oc-icon name="{{cmd.icon}}" tone="green" size="34rpx" />
+            </view>
+            <view class="slash-item__copy">
+              <text class="slash-item__label">{{cmd.label}}</text>
+              <text class="slash-item__desc">{{cmd.desc}}</text>
+            </view>
           </view>
-          <view class="slash-item__copy">
-            <text class="slash-item__label">{{item.label}}</text>
-            <text class="slash-item__desc">{{item.desc}}</text>
-          </view>
-        </view>
+        </block>
       </view>
     </floating-panel>
 

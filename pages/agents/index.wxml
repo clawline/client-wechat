@@ -53,11 +53,13 @@
           >
             <view class="agent-card__avatar">
               <text class="agent-card__emoji">{{item.identityEmoji || '🤖'}}</text>
+              <view wx:if="{{item.isDefault}}" class="agent-card__crown">
+                <text class="agent-card__crown-icon">👑</text>
+              </view>
             </view>
             <view class="agent-card__body">
               <view class="agent-card__head">
                 <text class="agent-card__name">{{item.name}}</text>
-                <text wx:if="{{item.isDefault}}" class="agent-card__badge">default</text>
               </view>
               <text class="agent-card__model">{{item.model || 'Agent: ' + item.id}}</text>
             </view>

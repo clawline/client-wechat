@@ -87,6 +87,20 @@ function filterSlashCommands(inputValue, catalog) {
   });
 }
 
+function groupBySection(commands) {
+  const sections = [];
+  const sectionMap = {};
+  commands.forEach((cmd) => {
+    const key = cmd.section || 'OTHER';
+    if (!sectionMap[key]) {
+      sectionMap[key] = { title: key, items: [] };
+      sections.push(sectionMap[key]);
+    }
+    sectionMap[key].items.push(cmd);
+  });
+  return sections;
+}
+
 function formatMessageText(contentType, content) {
   if (contentType === 'image') return content ? `[Image] ${content}` : '[Image]';
   if (contentType === 'voice') return content ? `[Voice] ${content}` : '[Voice]';
@@ -223,6 +237,7 @@ Page({
     editingMsg: null,
     slashCommandCatalog: clone(SLASH_COMMANDS),
     slashCommands: clone(SLASH_COMMANDS),
+    slashSections: groupBySection(SLASH_COMMANDS),
     emojiList: clone(EMOJI_LIST),
     quickCommands: QUICK_COMMANDS,
     agentEmoji: '🤖',
@@ -544,6 +559,7 @@ Page({
       inputValue,
       showSlashMenu: shouldOpenSlash,
       slashCommands: nextSlashCommands,
+      slashSections: groupBySection(nextSlashCommands),
       showEmojiPicker: shouldOpenSlash ? false : this.data.showEmojiPicker,
       reactingToMsgId: shouldOpenSlash ? '' : this.data.reactingToMsgId,
     });
@@ -591,6 +607,7 @@ Page({
       showSlashMenu: false,
       showEmojiPicker: false,
       slashCommands: clone(this.data.slashCommandCatalog),
+      slashSections: groupBySection(this.data.slashCommandCatalog),
       reactingToMsgId: '',
       activeBubbleId: '',
       replyingTo: null,
@@ -729,6 +746,7 @@ Page({
       showSlashMenu: false,
       showEmojiPicker: false,
       slashCommands: clone(this.data.slashCommandCatalog),
+      slashSections: groupBySection(this.data.slashCommandCatalog),
       reactingToMsgId: '',
       activeBubbleId: '',
     });
@@ -742,6 +760,7 @@ Page({
         inputValue: `${label} `,
         showSlashMenu: false,
         slashCommands: clone(this.data.slashCommandCatalog),
+      slashSections: groupBySection(this.data.slashCommandCatalog),
       });
       return;
     }
@@ -749,6 +768,7 @@ Page({
     this.setData({
       showSlashMenu: false,
       slashCommands: clone(this.data.slashCommandCatalog),
+      slashSections: groupBySection(this.data.slashCommandCatalog),
     });
     this.submitTextMessage(label);
   },

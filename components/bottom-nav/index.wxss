@@ -42,6 +42,7 @@
   height: 12rpx;
   border-radius: 999rpx;
   background: var(--color-primary);
+  box-shadow: 0 0 12rpx rgba(103, 184, 139, 0.5);
 }
 
 .nav-badge {
