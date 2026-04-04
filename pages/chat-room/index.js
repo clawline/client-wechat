@@ -214,6 +214,7 @@ Page({
 
     this.activeConn = activeConn;
     this.pageVisible = true;
+    this._serverChatId = activeConn.chatId || '';
     // Use server-assigned chatId from connection (set during connection.open)
     // Don't fabricate a client-side conversationId
     const conversationId = activeConn.chatId || '';
@@ -438,8 +439,9 @@ Page({
     if (merged.length > 300) {
       merged = merged.slice(merged.length - 300);
     }
-    // Persist to agentId-scoped storage (not fabricated conversationId)
-    var persistKey = this.data.activeChatId;
+    // Sync to global app-state (chat list previews, etc.)
+    var stateKey = this._serverChatId || this.data.activeConversationId || this.data.activeChatId;
+    if (stateKey) setMessages(stateKey, merged);
 
     // Compute suggestion bar state inline to merge into single setData
     var last = merged.length ? merged[merged.length - 1] : null;
@@ -617,8 +619,10 @@ Page({
         this._streamingAgentId = null;
         this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
         this.applyConnectionStatus({ status: 'connected', detail: '已连接' });
-        // Update chatId from server response (authoritative)
+        // Update chatId from server response (authoritative) — save synchronously
+        // so agent.selected handler can use it immediately
         if (data.chatId) {
+          this._serverChatId = data.chatId;
           this.setData({ activeConversationId: data.chatId });
         }
         // Request agent selection → triggers agent.selected → then request history
@@ -628,7 +632,9 @@ Page({
         break;
       case 'agent.selected': {
         // Agent confirmed, now request chat history with the server chatId + agentId
-        var effectiveChatId = this.data.activeConversationId || (data.chatId || '');
+        // Use _serverChatId (synchronous) because setData is async and may not have
+        // updated activeConversationId yet when this handler fires.
+        var effectiveChatId = this._serverChatId || this.data.activeConversationId || (this.genericClient ? this.genericClient.chatId : '');
         if (this.genericClient && effectiveChatId) {
           this.genericClient.requestHistory(effectiveChatId, this.data.activeChatId);
         }
