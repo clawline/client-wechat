@@ -288,6 +288,9 @@ Page({
     // Release the pooled WS connection with grace period so it can be
     // reused when the page comes back into view (onShow re-acquires).
     if (this._poolKey) {
+      // Unbind callbacks so packets arriving during the grace period
+      // don't call setData on a hidden page instance.
+      wsPool.rebind(this._poolKey, { onEvent: null, onStatusChange: null, onError: null });
       wsPool.release(this._poolKey, 15000);
       this.genericClient = null;
     }
