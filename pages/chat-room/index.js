@@ -291,6 +291,11 @@ Page({
       wsPool.release(this._poolKey, 15000);
       this.genericClient = null;
     }
+    // Reset UI state so the user doesn't return to a stale
+    // "thinking" or "connected" indicator if the idle timer fires
+    // and closes the connection while the page is hidden.
+    this.hideThinkingIndicator();
+    this.applyConnectionStatus({ status: 'disconnected' });
   },
 
   onUnload() {
