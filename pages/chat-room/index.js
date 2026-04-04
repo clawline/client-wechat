@@ -538,7 +538,7 @@ Page({
     var item = {
       id: 'local-' + Date.now(),
       connectionId: this.activeConn.id,
-      chatId: this.activeConn.chatId || this.data.activeConversationId,
+      chatId: this._serverChatId || this.activeConn.chatId || this.data.activeConversationId,
       agentId: this.data.activeChatId,
       kind: 'text',
       content: text,
@@ -571,7 +571,7 @@ Page({
   flushOutbox() {
     if (!this.genericClient || !this.genericClient.isOpen()) return;
     var connectionId = this.activeConn.id;
-    var chatId = this.activeConn.chatId || this.data.activeConversationId;
+    var chatId = this._serverChatId || this.activeConn.chatId || this.data.activeConversationId;
     var items = outbox.list(connectionId, chatId);
     if (!items.length) return;
     var maxFlush = Math.min(items.length, 10);
@@ -841,7 +841,7 @@ Page({
     var result = wsPool.acquire(poolKey, function () {
       return createGenericChannelClient({
         serverUrl: activeConn.serverUrl,
-        chatId: activeConn.chatId || self.data.activeConversationId,
+        chatId: self._serverChatId || activeConn.chatId || self.data.activeConversationId,
         chatType: 'direct',
         senderId: activeConn.senderId || connection.senderId,
         senderName: activeConn.displayName || connection.senderName,
@@ -859,6 +859,11 @@ Page({
     if (result.reused) {
       // Rebind callbacks to current page instance
       wsPool.rebind(poolKey, callbacks);
+      // Sync _serverChatId from the existing client (may have been set during previous connection.open)
+      if (this.genericClient.chatId) {
+        this._serverChatId = this.genericClient.chatId;
+        this.setData({ activeConversationId: this.genericClient.chatId });
+      }
       // Sync current status
       this.applyConnectionStatus({ status: this.genericClient.status, detail: '' });
       // If already connected, re-request history
