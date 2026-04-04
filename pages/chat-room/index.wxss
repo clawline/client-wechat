@@ -122,6 +122,35 @@
   border-color: #F7D58C;
 }
 
+.suggestion-pill--ai {
+  background: rgba(103, 184, 139, 0.08);
+  border-color: rgba(103, 184, 139, 0.25);
+}
+
+.suggestion-pill--ai .suggestion-pill__text {
+  color: var(--color-primary);
+}
+
+.suggestion-pill--loading {
+  opacity: 0.6;
+}
+
+.suggestion-pill--ai-result {
+  background: transparent;
+  border-color: transparent;
+}
+
+.suggestion-pill--ai-result:active {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.suggestion-pill--refresh {
+  background: transparent;
+  border-color: transparent;
+  min-width: 48rpx;
+  padding: 6rpx 10rpx;
+}
+
 .suggestion-pill__text {
   font-size: 22rpx;
   color: var(--color-text-secondary);

@@ -198,6 +198,8 @@ Page({
     showSuggestionBar: false,
     suggestionItems: [],
     showFollowUpPill: false,
+    aiSuggestions: [],
+    aiSuggestionsLoading: false,
     errorToast: null,
   },
 
@@ -212,7 +214,9 @@ Page({
 
     this.activeConn = activeConn;
     this.pageVisible = true;
-    const conversationId = activeConn.chatId || ('openclaw-mini-agent-' + agentId + '-' + activeConn.id);
+    // Use server-assigned chatId from connection (set during connection.open)
+    // Don't fabricate a client-side conversationId
+    const conversationId = activeConn.chatId || '';
     const connection = getConnectionState();
     var agentEmoji = '🤖';
     var agentName = agentId;
@@ -367,7 +371,7 @@ Page({
     var showFollowUpPill = false;
     var items = [];
     if (last && last.sender === 'ai') {
-      items = ['详细解释', '总结一下', '再试一次'];
+      items = [];
     } else {
       items = ['/status', '/models', '/help'];
       if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
@@ -379,6 +383,36 @@ Page({
       suggestionItems: items,
       showFollowUpPill: showFollowUpPill,
     });
+  },
+
+  fetchAiSuggestions() {
+    if (this.data.aiSuggestionsLoading) return;
+    if (!this.genericClient || !this.genericClient.isOpen()) return;
+    var msgs = this.data.messages
+      .filter(function (m) { return m.text && m.text.length > 0; })
+      .slice(-6)
+      .map(function (m) {
+        return { role: m.sender === 'user' ? 'user' : 'assistant', text: m.text };
+      });
+    if (!msgs.length) return;
+    this.setData({ aiSuggestionsLoading: true });
+    var self = this;
+    this.genericClient.requestSuggestions(msgs, function (suggestions) {
+      self.setData({
+        aiSuggestions: suggestions || [],
+        aiSuggestionsLoading: false,
+      });
+    });
+  },
+
+  handleSuggestionTap(event) {
+    var value = event.currentTarget.dataset.value;
+    if (!value) return;
+    this.setData({ inputValue: value });
+  },
+
+  handleFetchSuggestions() {
+    this.fetchAiSuggestions();
   },
 
   showThinkingIndicator(text) {
@@ -404,14 +438,15 @@ Page({
     if (merged.length > 300) {
       merged = merged.slice(merged.length - 300);
     }
-    setMessages(this.data.activeConversationId, merged);
+    // Persist to agentId-scoped storage (not fabricated conversationId)
+    var persistKey = this.data.activeChatId;
 
     // Compute suggestion bar state inline to merge into single setData
     var last = merged.length ? merged[merged.length - 1] : null;
     var showFollowUpPill = false;
     var items = [];
     if (last && last.sender === 'ai') {
-      items = ['详细解释', '总结一下', '再试一次'];
+      items = [];
     } else {
       items = ['/status', '/models', '/help'];
       if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
@@ -419,13 +454,18 @@ Page({
       }
     }
 
-    this.setData({
+    // Clear AI suggestions when message count changes (new messages arrived)
+    var prevLen = this.data.messages.length;
+    var clearAi = merged.length !== prevLen;
+
+    this.setData(Object.assign({
       messages: merged,
       displayMessages: addDateSeparators(merged),
       showSuggestionBar: !this.data.showSlashMenu && !this.data.showEmojiPicker,
       suggestionItems: items,
       showFollowUpPill: showFollowUpPill,
-    }, () => this.scrollChatToBottom());
+    }, clearAi ? { aiSuggestions: [], aiSuggestionsLoading: false } : {}),
+    () => this.scrollChatToBottom());
     this._persistMessages(merged);
   },
 
@@ -577,16 +617,20 @@ Page({
         this._streamingAgentId = null;
         this.syncMessages(this.data.messages.filter(function (m) { return !m.isStreaming; }));
         this.applyConnectionStatus({ status: 'connected', detail: '已连接' });
+        // Update chatId from server response (authoritative)
+        if (data.chatId) {
+          this.setData({ activeConversationId: data.chatId });
+        }
         // Request agent selection → triggers agent.selected → then request history
         if (this.genericClient && this.data.activeChatId) {
           this.genericClient.selectAgent(this.data.activeChatId);
         }
         break;
       case 'agent.selected': {
-        // Agent confirmed, now request chat history
-        var selectedAgentId = data.agentId || this.data.activeChatId;
-        if (this.genericClient) {
-          this.genericClient.requestHistory(this.data.activeConversationId);
+        // Agent confirmed, now request chat history with the server chatId + agentId
+        var effectiveChatId = this.data.activeConversationId || (data.chatId || '');
+        if (this.genericClient && effectiveChatId) {
+          this.genericClient.requestHistory(effectiveChatId, this.data.activeChatId);
         }
         break;
       }

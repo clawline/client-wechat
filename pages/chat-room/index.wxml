@@ -117,6 +117,32 @@
         <view wx:if="{{showFollowUpPill}}" class="suggestion-pill suggestion-pill--follow" data-value="催一下" bindtap="handleQuickCommand">
           <text class="suggestion-pill__text">催一下</text>
         </view>
+
+        <!-- AI suggestion button (when last message is from AI) -->
+        <block wx:if="{{!suggestionItems.length && !aiSuggestions.length && !aiSuggestionsLoading}}">
+          <view class="suggestion-pill suggestion-pill--ai" bindtap="handleFetchSuggestions">
+            <text class="suggestion-pill__text">✨ 建议</text>
+          </view>
+        </block>
+
+        <!-- AI loading -->
+        <block wx:if="{{aiSuggestionsLoading && !aiSuggestions.length}}">
+          <view class="suggestion-pill suggestion-pill--loading">
+            <text class="suggestion-pill__text">✨ 生成中…</text>
+          </view>
+        </block>
+
+        <!-- AI generated suggestions -->
+        <view wx:for="{{aiSuggestions}}" wx:key="*this" class="suggestion-pill suggestion-pill--ai-result" data-value="{{item}}" bindtap="handleSuggestionTap">
+          <text class="suggestion-pill__text">{{item}}</text>
+        </view>
+
+        <!-- Refresh button when AI suggestions shown -->
+        <view wx:if="{{aiSuggestions.length && !aiSuggestionsLoading}}" class="suggestion-pill suggestion-pill--refresh" bindtap="handleFetchSuggestions">
+          <text class="suggestion-pill__text">✨</text>
+        </view>
+
+        <!-- Quick commands -->
         <view wx:for="{{suggestionItems}}" wx:key="*this" class="suggestion-pill" data-value="{{item}}" bindtap="handleQuickCommand">
           <text class="suggestion-pill__text">{{item}}</text>
         </view>

@@ -213,6 +213,8 @@ class GenericChannelClient {
         const packet = JSON.parse(response.data);
         // Heartbeat response — silently consume, don't forward to UI
         if (packet.type === 'pong') return;
+        // Suggestion response — handle internally via callback
+        if (this.handleSuggestionResponse(packet)) return;
         if (packet.type === 'connection.open' && packet.data && packet.data.chatId) {
           this.chatId = packet.data.chatId;
         }
@@ -485,13 +487,18 @@ class GenericChannelClient {
     });
   }
 
-  requestHistory(chatId) {
+  requestHistory(chatId, agentId, opts) {
+    var historyOpts = opts || {};
+    var historyData = {
+      requestId: createStableId('history'),
+      chatId: chatId,
+    };
+    if (agentId) historyData.agentId = agentId;
+    if (historyOpts.limit) historyData.limit = historyOpts.limit;
+    if (historyOpts.before) historyData.before = historyOpts.before;
     this.sendRaw({
       type: 'history.get',
-      data: {
-        requestId: createStableId('history'),
-        chatId: chatId,
-      },
+      data: historyData,
     });
   }
 
@@ -518,6 +525,57 @@ class GenericChannelClient {
         timestamp: Date.now(),
       },
     });
+  }
+
+  /**
+   * Request AI-generated reply suggestions based on recent conversation.
+   * Server responds with suggestion.response packet.
+   * @param {Array<{role: string, text: string}>} messages - Recent messages
+   * @param {function} callback - Called with string[] suggestions
+   * @returns {string} requestId for correlation
+   */
+  requestSuggestions(messages, callback) {
+    var requestId = createStableId('suggestion');
+    // Store pending callback
+    if (!this._pendingSuggestions) this._pendingSuggestions = {};
+    // Timeout after 10s
+    var self = this;
+    var timer = setTimeout(function () {
+      if (self._pendingSuggestions && self._pendingSuggestions[requestId]) {
+        delete self._pendingSuggestions[requestId];
+        if (typeof callback === 'function') callback([]);
+      }
+    }, 10000);
+    this._pendingSuggestions[requestId] = { callback: callback, timer: timer };
+    this.sendRaw({
+      type: 'suggestion.get',
+      data: {
+        requestId: requestId,
+        messages: (messages || []).slice(-6).map(function (m) {
+          return { role: m.role, text: (m.text || '').slice(0, 300) };
+        }),
+      },
+    });
+    return requestId;
+  }
+
+  /**
+   * Handle suggestion.response packet. Call from onMessage handler.
+   * @returns {boolean} true if packet was handled
+   */
+  handleSuggestionResponse(packet) {
+    if (!packet || packet.type !== 'suggestion.response') return false;
+    var data = packet.data || {};
+    var requestId = data.requestId;
+    if (!requestId || !this._pendingSuggestions || !this._pendingSuggestions[requestId]) return false;
+    var pending = this._pendingSuggestions[requestId];
+    clearTimeout(pending.timer);
+    delete this._pendingSuggestions[requestId];
+    var suggestions = Array.isArray(data.suggestions)
+      ? data.suggestions.filter(function (s) { return typeof s === 'string'; })
+      : [];
+    if (typeof pending.callback === 'function') pending.callback(suggestions);
+    return true;
   }
 
   sendTyping(isTyping) {
