@@ -197,7 +197,7 @@ Page({
     editingMsg: null,
     slashCommandCatalog: SLASH_COMMANDS.slice(),
     slashCommands: SLASH_COMMANDS.slice(),
-    emojiList: EMOJI_LIST,
+    emojiList: EMOJI_LIST.slice(),
     agentEmoji: '🤖',
     agentName: '',
     isRecording: false,

@@ -16,6 +16,12 @@ const {
   updateServerConnection,
 } = require('../../utils/generic-channel');
 
+const TOGGLE_STORAGE_KEYS = {
+  darkMode: 'openclaw.darkMode',
+  pushNotifications: 'openclaw.pushNotif',
+  inAppNotifications: 'openclaw.inAppNotif',
+};
+
 Page({
   data: {
     ...DEFAULT_PAGE_CHROME,
@@ -56,12 +62,6 @@ Page({
   handleToggleSetting(event) {
     const { key } = event.detail;
 
-    const TOGGLE_STORAGE_KEYS = {
-      darkMode: 'openclaw.darkMode',
-      pushNotifications: 'openclaw.pushNotif',
-      inAppNotifications: 'openclaw.inAppNotif',
-    };
-
     const storageKey = TOGGLE_STORAGE_KEYS[key];
     if (storageKey) {
       var current = key === 'darkMode'
@@ -73,7 +73,7 @@ Page({
 
     toggleProfileGroupSetting(key);
     var update = { profileGroups: getProfileGroups() };
-    if (key === 'darkMode') update.darkMode = !isDarkMode();
+    if (key === 'darkMode') update.darkMode = isDarkMode();
     this.setData(update);
   },
 
