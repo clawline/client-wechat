@@ -2,7 +2,6 @@ const { SLASH_COMMANDS, EMOJI_LIST } = require('../../mock/data');
 const { DEFAULT_PAGE_CHROME, getPageChromeData } = require('../../utils/layout');
 const {
   clearAgentUnread,
-  clone,
   getConnectionState,
   getMessages,
   incrementAgentUnread,
@@ -45,7 +44,7 @@ function detectMessageActions(text) {
 function filterSlashCommands(inputValue, catalog) {
   if (!inputValue.startsWith('/')) return [];
   const query = inputValue.slice(1).trim().toLowerCase();
-  if (!query) return clone(catalog);
+  if (!query) return catalog.slice();
   return catalog.filter(function (item) {
     return item.label.toLowerCase().includes('/' + query) || item.desc.toLowerCase().includes(query);
   });
@@ -59,14 +58,13 @@ function formatMessageText(contentType, content) {
   return content || '';
 }
 
-function normalizeHistoryMessage(entry) {
+function normalizeMessageBase(entry, defaults) {
   return {
     id: entry.messageId,
-    sender: entry.direction === 'sent' ? 'user' : 'ai',
-    text: formatMessageText(entry.contentType, entry.content),
+    text: defaults.text || '',
     reactions: [],
-    contentType: entry.contentType || 'text',
-    mediaType: entry.contentType || 'text',
+    contentType: defaults.contentType || 'text',
+    mediaType: defaults.mediaType || 'text',
     mediaUrl: entry.mediaUrl || '',
     mimeType: entry.mimeType || '',
     timestamp: entry.timestamp || Date.now(),
@@ -74,43 +72,39 @@ function normalizeHistoryMessage(entry) {
     quotedText: entry.quotedText || '',
     replyPreview: '',
     showReply: true,
-    deliveryStatus: entry.direction === 'sent' ? 'sent' : '',
+    ...defaults,
   };
+}
+
+function normalizeHistoryMessage(entry) {
+  return normalizeMessageBase(entry, {
+    sender: entry.direction === 'sent' ? 'user' : 'ai',
+    text: formatMessageText(entry.contentType, entry.content),
+    contentType: entry.contentType || 'text',
+    mediaType: entry.contentType || 'text',
+    deliveryStatus: entry.direction === 'sent' ? 'sent' : '',
+  });
 }
 
 function normalizeOutboundMessage(entry) {
-  return {
-    id: entry.messageId,
+  var text = formatMessageText(entry.contentType, entry.content);
+  return normalizeMessageBase(entry, {
     sender: 'ai',
-    text: formatMessageText(entry.contentType, entry.content),
-    reactions: [],
+    text: text,
     contentType: entry.contentType || 'text',
     mediaType: entry.contentType || 'text',
-    mediaUrl: entry.mediaUrl || '',
-    mimeType: entry.mimeType || '',
-    timestamp: entry.timestamp || Date.now(),
-    replyTo: entry.parentId || '',
-    quotedText: entry.quotedText || '',
-    replyPreview: '',
-    showReply: true,
-    actions: detectMessageActions(formatMessageText(entry.contentType, entry.content)),
-  };
+    actions: detectMessageActions(text),
+  });
 }
 
 function normalizeInboundMessage(entry) {
-  return {
-    id: entry.messageId,
+  return normalizeMessageBase(entry, {
     sender: 'user',
     text: entry.content || '',
-    reactions: [],
     contentType: entry.messageType || 'text',
     mediaType: entry.messageType || 'text',
-    timestamp: entry.timestamp || Date.now(),
-    replyTo: entry.parentId || '',
-    replyPreview: '',
-    showReply: true,
     deliveryStatus: 'sent',
-  };
+  });
 }
 
 function formatTime(ts) {
@@ -161,6 +155,25 @@ function getThinkingText(startAt, overrideText) {
   return DEFAULT_THINKING_TEXT;
 }
 
+function computeSuggestionBarState(messages, showThinkingIndicator, showSlashMenu, showEmojiPicker) {
+  var last = messages.length ? messages[messages.length - 1] : null;
+  var showFollowUpPill = false;
+  var items = [];
+  if (last && last.sender === 'ai') {
+    items = [];
+  } else {
+    items = ['/status', '/models', '/help'];
+    if (last && last.sender === 'user' && !showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
+      showFollowUpPill = true;
+    }
+  }
+  return {
+    showSuggestionBar: !showSlashMenu && !showEmojiPicker,
+    suggestionItems: items,
+    showFollowUpPill: showFollowUpPill,
+  };
+}
+
 Page({
   data: {
     ...DEFAULT_PAGE_CHROME,
@@ -182,9 +195,9 @@ Page({
     replyingTo: null,
     peerTyping: false,
     editingMsg: null,
-    slashCommandCatalog: clone(SLASH_COMMANDS),
-    slashCommands: clone(SLASH_COMMANDS),
-    emojiList: clone(EMOJI_LIST),
+    slashCommandCatalog: SLASH_COMMANDS.slice(),
+    slashCommands: SLASH_COMMANDS.slice(),
+    emojiList: EMOJI_LIST,
     agentEmoji: '🤖',
     agentName: '',
     isRecording: false,
@@ -267,29 +280,25 @@ Page({
   },
 
   onHide() {
-    this.pageVisible = false;
-    this.clearSuggestionTimer();
-    this.clearThinkingTimer();
-    if (this._typingTimeout) clearTimeout(this._typingTimeout);
-    if (this._isRecording && this._recorderManager) {
-      this._recorderManager.stop();
-      this._isRecording = false;
-      this.setData({ isRecording: false });
-    }
+    this._cleanupTimers();
   },
 
   onUnload() {
+    this._cleanupTimers();
+    if (this._errorToastTimer) clearTimeout(this._errorToastTimer);
+    this.teardownGenericChannel(true);
+  },
+
+  _cleanupTimers() {
     this.pageVisible = false;
     this.clearSuggestionTimer();
     this.clearThinkingTimer();
     if (this._typingTimeout) clearTimeout(this._typingTimeout);
-    if (this._errorToastTimer) clearTimeout(this._errorToastTimer);
     if (this._isRecording && this._recorderManager) {
       this._recorderManager.stop();
       this._isRecording = false;
       this.setData({ isRecording: false });
     }
-    this.teardownGenericChannel(true);
   },
 
   startSuggestionTimer() {
@@ -368,22 +377,7 @@ Page({
   },
 
   refreshSuggestionBar() {
-    var last = this.data.messages.length ? this.data.messages[this.data.messages.length - 1] : null;
-    var showFollowUpPill = false;
-    var items = [];
-    if (last && last.sender === 'ai') {
-      items = [];
-    } else {
-      items = ['/status', '/models', '/help'];
-      if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
-        showFollowUpPill = true;
-      }
-    }
-    this.setData({
-      showSuggestionBar: !this.data.showSlashMenu && !this.data.showEmojiPicker,
-      suggestionItems: items,
-      showFollowUpPill: showFollowUpPill,
-    });
+    this.setData(computeSuggestionBarState(this.data.messages, this.data.showThinkingIndicator, this.data.showSlashMenu, this.data.showEmojiPicker));
   },
 
   fetchAiSuggestions() {
@@ -443,19 +437,6 @@ Page({
     var stateKey = this._serverChatId || this.data.activeConversationId || this.data.activeChatId;
     if (stateKey) setMessages(stateKey, merged);
 
-    // Compute suggestion bar state inline to merge into single setData
-    var last = merged.length ? merged[merged.length - 1] : null;
-    var showFollowUpPill = false;
-    var items = [];
-    if (last && last.sender === 'ai') {
-      items = [];
-    } else {
-      items = ['/status', '/models', '/help'];
-      if (last && last.sender === 'user' && !this.data.showThinkingIndicator && (Date.now() - (last.timestamp || 0)) > 120000) {
-        showFollowUpPill = true;
-      }
-    }
-
     // Clear AI suggestions when message count changes (new messages arrived)
     var prevLen = this.data.messages.length;
     var clearAi = merged.length !== prevLen;
@@ -463,10 +444,8 @@ Page({
     this.setData(Object.assign({
       messages: merged,
       displayMessages: addDateSeparators(merged),
-      showSuggestionBar: !this.data.showSlashMenu && !this.data.showEmojiPicker,
-      suggestionItems: items,
-      showFollowUpPill: showFollowUpPill,
-    }, clearAi ? { aiSuggestions: [], aiSuggestionsLoading: false } : {}),
+    }, computeSuggestionBarState(merged, this.data.showThinkingIndicator, this.data.showSlashMenu, this.data.showEmojiPicker),
+    clearAi ? { aiSuggestions: [], aiSuggestionsLoading: false } : {}),
     () => this.scrollChatToBottom());
     this._persistMessages(merged);
   },
@@ -509,7 +488,7 @@ Page({
       var configuredSkills = (currentAgent && Array.isArray(currentAgent.configuredSkills)) ? currentAgent.configuredSkills : [];
       var allSkills = configuredSkills.length ? configuredSkills : skills;
       if (!allSkills.length) return;
-      var catalog = clone(this.data.slashCommandCatalog);
+      var catalog = this.data.slashCommandCatalog.slice();
       var existingIds = {};
       catalog.forEach(function (c) { existingIds[c.id] = true; });
       var added = 0;
@@ -915,7 +894,7 @@ Page({
     this.setData({
       inputValue: inputValue,
       showSlashMenu: shouldOpenSlash,
-      slashCommands: shouldOpenSlash ? filterSlashCommands(inputValue, this.data.slashCommandCatalog) : clone(this.data.slashCommandCatalog),
+      slashCommands: shouldOpenSlash ? filterSlashCommands(inputValue, this.data.slashCommandCatalog) : this.data.slashCommandCatalog.slice(),
       showEmojiPicker: shouldOpenSlash ? false : this.data.showEmojiPicker,
       reactingToMsgId: shouldOpenSlash ? '' : this.data.reactingToMsgId,
     });
@@ -974,7 +953,7 @@ Page({
       inputValue: '',
       showSlashMenu: false,
       showEmojiPicker: false,
-      slashCommands: clone(this.data.slashCommandCatalog),
+      slashCommands: this.data.slashCommandCatalog.slice(),
       reactingToMsgId: '',
       activeBubbleId: '',
       replyingTo: null,
@@ -1137,13 +1116,13 @@ Page({
   },
 
   handleClosePanels() {
-    this.setData({ showSlashMenu: false, showEmojiPicker: false, showAttachMenu: false, slashCommands: clone(this.data.slashCommandCatalog), reactingToMsgId: '', activeBubbleId: '', errorToast: null });
+    this.setData({ showSlashMenu: false, showEmojiPicker: false, showAttachMenu: false, slashCommands: this.data.slashCommandCatalog.slice(), reactingToMsgId: '', activeBubbleId: '', errorToast: null });
     this.refreshSuggestionBar();
   },
 
   handleSelectCommand(event) {
     const label = event.currentTarget.dataset.label;
-    this.setData({ showSlashMenu: false, slashCommands: clone(this.data.slashCommandCatalog) });
+    this.setData({ showSlashMenu: false, slashCommands: this.data.slashCommandCatalog.slice() });
     this.submitTextMessage(label);
   },
 

@@ -62,10 +62,12 @@ Page({
   },
 
   onHide() {
+    if (this._searchDebounce) clearTimeout(this._searchDebounce);
     this.releaseAllLobbies();
   },
 
   onUnload() {
+    if (this._searchDebounce) clearTimeout(this._searchDebounce);
     this.releaseAllLobbies();
   },
 
@@ -205,6 +207,16 @@ Page({
 
   handleSearchInput(event) {
     const searchQuery = event.detail.value || '';
+    this.setData({ searchQuery });
+
+    // Debounce the expensive filter operation to avoid per-keystroke rebuilds
+    if (this._searchDebounce) clearTimeout(this._searchDebounce);
+    this._searchDebounce = setTimeout(() => {
+      this._applySearchFilter(searchQuery);
+    }, 200);
+  },
+
+  _applySearchFilter(searchQuery) {
     var filtered = filterAgents(this.data.agents, searchQuery);
 
     // Rebuild server groups with filter
@@ -223,7 +235,6 @@ Page({
     });
 
     this.setData({
-      searchQuery,
       displayedAgents: filtered,
       serverGroups: groups,
     });

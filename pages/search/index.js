@@ -74,7 +74,12 @@ Page({
   handleSearchInput(event) {
     var query = event.detail.value || '';
     this.setData({ searchScreenQuery: query });
-    this._doSearch(query);
+
+    // Debounce to avoid per-keystroke storage scans
+    if (this._searchDebounce) clearTimeout(this._searchDebounce);
+    this._searchDebounce = setTimeout(() => {
+      this._doSearch(query);
+    }, 250);
   },
 
   _doSearch(query) {
