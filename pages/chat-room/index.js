@@ -628,6 +628,8 @@ Page({
         // Request agent selection → triggers agent.selected → then request history
         if (this.genericClient && this.data.activeChatId) {
           this.genericClient.selectAgent(this.data.activeChatId);
+          // Also request agent list to keep skills/metadata cache fresh
+          this.genericClient.requestAgentList();
         }
         break;
       case 'agent.selected': {
@@ -804,6 +806,14 @@ Page({
       }
       case 'message.delete': {
         if (data.messageId) this.syncMessages(this.data.messages.filter(function (m) { return m.id !== data.messageId; }));
+        break;
+      }
+      case 'agent.list': {
+        // Cache agent list and refresh skills catalog
+        if (data && Array.isArray(data.agents)) {
+          try { wx.setStorageSync('openclaw.agentList', JSON.stringify(data.agents)); } catch (e) {}
+          this._loadSkillsIntoCatalog();
+        }
         break;
       }
       default:

@@ -217,6 +217,10 @@ class GenericChannelClient {
         if (this.handleSuggestionResponse(packet)) return;
         if (packet.type === 'connection.open' && packet.data && packet.data.chatId) {
           this.chatId = packet.data.chatId;
+          // Persist server-assigned chatId to connection storage so it survives app restarts
+          if (this.connectionId) {
+            updateServerConnection(this.connectionId, { chatId: packet.data.chatId });
+          }
         }
         if (typeof this.onEvent === 'function') {
           this.onEvent(packet);
