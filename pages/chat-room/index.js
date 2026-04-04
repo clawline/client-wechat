@@ -277,10 +277,20 @@ Page({
     if (this.data.activeChatId) clearAgentUnread(this.data.activeChatId);
     this.startSuggestionTimer();
     if (this.data.showThinkingIndicator) this.startThinkingTimer();
+    // Re-acquire pooled connection (cancel idle-close if pending)
+    if (this._poolKey && !this.genericClient) {
+      this.connectAgentChannel(false);
+    }
   },
 
   onHide() {
     this._cleanupTimers();
+    // Release the pooled WS connection with grace period so it can be
+    // reused when the page comes back into view (onShow re-acquires).
+    if (this._poolKey) {
+      wsPool.release(this._poolKey, 15000);
+      this.genericClient = null;
+    }
   },
 
   onUnload() {

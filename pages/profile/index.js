@@ -64,9 +64,12 @@ Page({
 
     const storageKey = TOGGLE_STORAGE_KEYS[key];
     if (storageKey) {
-      var current = key === 'darkMode'
-        ? (isDarkMode() ? '1' : '0')
-        : (wx.getStorageSync(storageKey) || '1');
+      var current;
+      if (key === 'darkMode') {
+        current = isDarkMode() ? '1' : '0';
+      } else {
+        try { current = wx.getStorageSync(storageKey) || '1'; } catch (e) { current = '1'; }
+      }
       var next = current === '0' ? '1' : '0';
       try { wx.setStorageSync(storageKey, next); } catch (e) {}
     }

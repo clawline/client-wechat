@@ -65,6 +65,18 @@ Page({
     });
   },
 
+  onHide() {
+    this._clearSearchDebounce();
+  },
+
+  onUnload() {
+    this._clearSearchDebounce();
+  },
+
+  _clearSearchDebounce() {
+    if (this._searchDebounce) { clearTimeout(this._searchDebounce); this._searchDebounce = null; }
+  },
+
   handleNavigate(event) {
     const { screen } = event.detail;
     if (!screen || screen === this.data.currentScreen) return;
@@ -105,6 +117,7 @@ Page({
 
   handleSearchShortcut(event) {
     const { label } = event.currentTarget.dataset;
+    this._clearSearchDebounce();
     this.setData({ searchScreenQuery: label });
     this._doSearch(label);
   },
