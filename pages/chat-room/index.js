@@ -300,7 +300,6 @@ Page({
 
   onUnload() {
     this._cleanupTimers();
-    if (this._errorToastTimer) clearTimeout(this._errorToastTimer);
     this.teardownGenericChannel(true);
   },
 
@@ -309,6 +308,7 @@ Page({
     this.clearSuggestionTimer();
     this.clearThinkingTimer();
     if (this._typingTimeout) clearTimeout(this._typingTimeout);
+    if (this._errorToastTimer) { clearTimeout(this._errorToastTimer); this._errorToastTimer = null; }
     if (this._isRecording && this._recorderManager) {
       this._recorderManager.stop();
       this._isRecording = false;

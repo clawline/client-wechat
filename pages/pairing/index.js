@@ -79,13 +79,11 @@ function friendlyName(hostname) {
 }
 
 /**
- * Resolve a friendly name from a parsed connection URL.
- * Priority: channelName > displayName > hostname-based friendly name.
+ * Derive a server label from a parsed connection URL.
+ * Priority: channelName > hostname-based friendly name.
  */
-function resolveConnectionName(parsed) {
-  if (parsed.channelName || parsed.displayName) {
-    return parsed.channelName || parsed.displayName;
-  }
+function resolveServerLabel(parsed) {
+  if (parsed.channelName) return parsed.channelName;
   var hostname = '';
   try {
     var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
@@ -97,15 +95,20 @@ function resolveConnectionName(parsed) {
 /**
  * Save a parsed connection and navigate to chats.
  * Shared by URL login, QR scan, and manual pairing flows.
+ *
+ * Server label (channelName / hostname) is used for the connection name.
+ * User display name (displayName param) is stored separately so a server
+ * label never overwrites the user's sender identity.
  */
 function activateParsedConnection(parsed) {
-  var connName = resolveConnectionName(parsed);
+  var serverLabel = resolveServerLabel(parsed);
+  var userDisplayName = parsed.displayName || serverLabel;
   saveConnectionState({
-    displayName: connName,
+    displayName: userDisplayName,
     serverUrl: parsed.serverUrl,
     isPaired: true,
   });
-  var conn = addServerConnection(connName, parsed.serverUrl, connName, parsed.token, parsed.chatId, parsed.senderId);
+  var conn = addServerConnection(serverLabel, parsed.serverUrl, userDisplayName, parsed.token, parsed.chatId, parsed.senderId);
   setActiveConnectionId(conn.id);
   wx.showToast({ title: 'Server connected!', icon: 'none' });
   navigateToScreen('chats');
