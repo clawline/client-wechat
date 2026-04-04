@@ -11,6 +11,8 @@ const STORAGE_KEYS = {
 const DEFAULT_WS_URL = '';
 const MAX_RECONNECT_ATTEMPTS = 6;
 const CLOSE_CODE_NORMAL = 1000;
+const HEARTBEAT_INTERVAL_MS = 25 * 1000; // 25s — keep alive through proxies
+const HEARTBEAT_TIMEOUT_MS = 10 * 1000;  // 10s — if no pong, consider dead
 
 function safeGetStorage(key) {
   try {
@@ -83,7 +85,7 @@ function buildSocketUrl(serverUrl, chatId, agentId, token) {
 }
 
 function buildInboundMessage(params) {
-  const { chatId, senderId, senderName, chatType = 'direct', content, parentId, agentId, messageId, timestamp, messageType, mediaUrl, mimeType } = params;
+  const { chatId, senderId, senderName, chatType = 'direct', content, parentId, quotedText, agentId, messageId, timestamp, messageType, mediaUrl, mimeType } = params;
   return {
     messageId: messageId || createStableId('msg'),
     chatId,
@@ -97,6 +99,7 @@ function buildInboundMessage(params) {
     timestamp: timestamp || Date.now(),
     ...(agentId ? { agentId } : {}),
     ...(parentId ? { parentId } : {}),
+    ...(quotedText ? { quotedText } : {}),
   };
 }
 
@@ -118,6 +121,8 @@ class GenericChannelClient {
     this.connectionToken = 0;
     this.reconnectAttempts = 0;
     this.reconnectTimer = null;
+    this.heartbeatTimer = null;
+    this.heartbeatPending = false;
     this.manualClose = false;
     this.status = 'disconnected';
   }
@@ -195,14 +200,19 @@ class GenericChannelClient {
       if (this.connectionToken !== token || this.socketTask !== socketTask) return;
       this.reconnectAttempts = 0;
       this.updateStatus('connected');
+      this.startHeartbeat();
       this.flushOfflineQueue();
     });
 
     socketTask.onMessage((response) => {
       if (this.connectionToken !== token || this.socketTask !== socketTask) return;
+      // Any message from server means connection is alive
+      this.heartbeatPending = false;
 
       try {
         const packet = JSON.parse(response.data);
+        // Heartbeat response — silently consume, don't forward to UI
+        if (packet.type === 'pong') return;
         if (packet.type === 'connection.open' && packet.data && packet.data.chatId) {
           this.chatId = packet.data.chatId;
         }
@@ -255,9 +265,49 @@ class GenericChannelClient {
     }
   }
 
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.isOpen()) {
+        this.stopHeartbeat();
+        return;
+      }
+      // If previous heartbeat never got a response, connection is dead
+      if (this.heartbeatPending) {
+        this.heartbeatPending = false;
+        this.stopHeartbeat();
+        // Force close and trigger reconnect
+        try { this.socketTask.close({ code: 4000, reason: 'Heartbeat timeout' }); } catch (e) {}
+        return;
+      }
+      this.heartbeatPending = true;
+      try {
+        this.socketTask.send({
+          data: JSON.stringify({ type: 'ping', data: { timestamp: Date.now() } }),
+          fail: () => {
+            this.stopHeartbeat();
+            try { this.socketTask.close({ code: 4000, reason: 'Heartbeat send failed' }); } catch (e) {}
+          },
+        });
+      } catch (e) {
+        this.stopHeartbeat();
+        try { this.socketTask.close({ code: 4000, reason: 'Heartbeat send failed' }); } catch (e2) {}
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    this.heartbeatPending = false;
+  }
+
   close(manual = true) {
     this.manualClose = manual;
     this.clearReconnectTimer();
+    this.stopHeartbeat();
     this.connectionToken += 1;
 
     const socketTask = this.socketTask;
@@ -308,6 +358,7 @@ class GenericChannelClient {
       chatType: this.chatType,
       content,
       parentId,
+      quotedText: options.quotedText,
       agentId: this.agentId,
       messageId: options.messageId,
       timestamp: options.timestamp,
@@ -336,8 +387,8 @@ class GenericChannelClient {
     });
   }
 
-  sendTextWithParent(content, parentId, options = {}) {
-    return this.sendText(content, parentId, options);
+  sendTextWithParent(content, parentId, quotedText, options = {}) {
+    return this.sendText(content, parentId, { ...options, quotedText });
   }
 
   sendMedia(opts = {}) {

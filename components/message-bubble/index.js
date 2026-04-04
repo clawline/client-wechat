@@ -15,9 +15,16 @@ Component({
       if (sender !== 'user' && text) this.setData({ mdNodes: parseMarkdown(text) });
       else this.setData({ mdNodes: [] });
     },
-    'message.replyTo, message.showReply, messages': function (replyTo, showReply, messages) {
+    'message.replyTo, message.quotedText, message.showReply, messages': function (replyTo, quotedText, showReply, messages) {
       if (!replyTo || showReply === false) {
         this.setData({ replyToText: '' });
+        return;
+      }
+      // Prefer quotedText from payload (server-provided), fallback to local message lookup
+      if (quotedText) {
+        var preview = quotedText.slice(0, 80);
+        if (quotedText.length > 80) preview += '…';
+        this.setData({ replyToText: preview });
         return;
       }
       var quoted = (messages || []).find(function (m) { return m.id === replyTo; });

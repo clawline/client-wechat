@@ -71,6 +71,7 @@ function normalizeHistoryMessage(entry) {
     mimeType: entry.mimeType || '',
     timestamp: entry.timestamp || Date.now(),
     replyTo: entry.parentId || '',
+    quotedText: entry.quotedText || '',
     replyPreview: '',
     showReply: true,
     deliveryStatus: entry.direction === 'sent' ? 'sent' : '',
@@ -89,6 +90,7 @@ function normalizeOutboundMessage(entry) {
     mimeType: entry.mimeType || '',
     timestamp: entry.timestamp || Date.now(),
     replyTo: entry.parentId || '',
+    quotedText: entry.quotedText || '',
     replyPreview: '',
     showReply: true,
     actions: detectMessageActions(formatMessageText(entry.contentType, entry.content)),
@@ -492,6 +494,7 @@ Page({
       kind: 'text',
       content: text,
       parentId: replyTo && replyTo.id ? replyTo.id : '',
+      quotedText: replyTo && replyTo.text ? replyTo.text : '',
       createdAt: Date.now(),
       retryCount: 0,
     };
@@ -536,7 +539,7 @@ Page({
       outbox.markInFlight(connectionId, chatId, item.id, true);
       try {
         var payload = item.parentId
-          ? self.genericClient.sendTextWithParent(item.content, item.parentId)
+          ? self.genericClient.sendTextWithParent(item.content, item.parentId, item.quotedText || '')
           : self.genericClient.sendText(item.content);
         outbox.remove(connectionId, chatId, item.id);
         self.syncMessages(self.data.messages.map(function (msg) {
@@ -847,6 +850,7 @@ Page({
       mediaType: 'text',
       timestamp: Date.now(),
       replyTo: replyTo && replyTo.id ? replyTo.id : '',
+      quotedText: replyTo && replyTo.text ? replyTo.text : '',
       replyPreview: '',
       showReply: true,
       reactions: [],
@@ -855,7 +859,9 @@ Page({
 
     let payload;
     try {
-      payload = replyTo && replyTo.id ? this.genericClient.sendTextWithParent(text, replyTo.id) : this.genericClient.sendText(text);
+      payload = replyTo && replyTo.id
+        ? this.genericClient.sendTextWithParent(text, replyTo.id, replyTo.text)
+        : this.genericClient.sendText(text);
     } catch (e) {
       // Send failed — mark message as failed (keep visible) and enqueue for retry
       this.syncMessages(this.data.messages.map(function (msg) {
