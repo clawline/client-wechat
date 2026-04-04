@@ -105,13 +105,9 @@
       </block>
     </view>
 
-    <!-- Delivery status (user messages only) -->
-    <view wx:if="{{message.sender === 'user' && message.deliveryStatus}}" class="msg-delivery">
-      <text wx:if="{{message.deliveryStatus === 'pending'}}" class="msg-delivery__icon msg-delivery--pending">○</text>
-      <text wx:elif="{{message.deliveryStatus === 'sent'}}" class="msg-delivery__icon msg-delivery--sent">✓</text>
-      <text wx:elif="{{message.deliveryStatus === 'delivered'}}" class="msg-delivery__icon msg-delivery--delivered">✓✓</text>
-      <text wx:elif="{{message.deliveryStatus === 'read'}}" class="msg-delivery__icon msg-delivery--read">✓✓</text>
-      <text wx:elif="{{message.deliveryStatus === 'failed'}}" class="msg-delivery__icon msg-delivery--failed" catchtap="onRetryTap" data-msg-id="{{message.id}}">✕ 重试</text>
+    <!-- Delivery status (only show failed state for retry) -->
+    <view wx:if="{{message.sender === 'user' && message.deliveryStatus === 'failed'}}" class="msg-delivery">
+      <text class="msg-delivery__icon msg-delivery--failed" catchtap="onRetryTap" data-msg-id="{{message.id}}">✕ 重试</text>
     </view>
 
     <!-- Reactions -->

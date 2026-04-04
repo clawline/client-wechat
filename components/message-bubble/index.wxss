@@ -147,10 +147,6 @@
   font-size: 20rpx;
 }
 
-.msg-delivery--pending { color: #999; }
-.msg-delivery--sent { color: var(--color-text-muted); }
-.msg-delivery--delivered { color: #5B8DEF; }
-.msg-delivery--read { color: #5B8DEF; }
 .msg-delivery--failed { color: #E53E3E; }
 
 /* Reactions */

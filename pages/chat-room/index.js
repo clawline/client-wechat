@@ -451,29 +451,36 @@ Page({
   },
 
   /**
-   * Load cached skills from storage and merge into slash command catalog.
-   * Skills are stored as { name, description } and shown as /skill:<name>.
+   * Load skills from agent list cache and merge into slash command catalog.
+   * Skills come from the agent.list response (agent.skills array).
    */
   _loadSkillsIntoCatalog() {
     try {
-      var raw = wx.getStorageSync('openclaw.skills');
+      var raw = wx.getStorageSync('openclaw.agentList');
       if (!raw) return;
-      var skills = JSON.parse(raw);
-      if (!Array.isArray(skills) || !skills.length) return;
+      var agents = JSON.parse(raw);
+      if (!Array.isArray(agents)) return;
+      // Find current agent's skills
+      var currentAgent = agents.find((a) => a.id === this.data.activeChatId);
+      var skills = (currentAgent && Array.isArray(currentAgent.skills)) ? currentAgent.skills : [];
+      // Also check configuredSkills
+      var configuredSkills = (currentAgent && Array.isArray(currentAgent.configuredSkills)) ? currentAgent.configuredSkills : [];
+      var allSkills = configuredSkills.length ? configuredSkills : skills;
+      if (!allSkills.length) return;
       var catalog = clone(this.data.slashCommandCatalog);
       var existingIds = {};
       catalog.forEach(function (c) { existingIds[c.id] = true; });
       var added = 0;
-      skills.forEach(function (skill) {
-        if (!skill || !skill.name) return;
-        var id = 'skill-' + skill.name;
+      allSkills.forEach(function (skillName) {
+        if (!skillName) return;
+        var id = 'skill-' + skillName;
         if (existingIds[id]) return;
         existingIds[id] = true;
         catalog.push({
           id: id,
           icon: 'zap',
-          label: '/skill:' + skill.name,
-          desc: skill.description || skill.name,
+          label: '/skill:' + skillName,
+          desc: skillName,
         });
         added++;
       });
@@ -584,6 +591,11 @@ Page({
         break;
       }
       case 'history.sync': {
+        // Agent isolation: only accept history for current agent
+        var historyAgentId = data.agentId;
+        if (historyAgentId && this.data.activeChatId && historyAgentId !== this.data.activeChatId) {
+          break;
+        }
         var historyMessages = Array.isArray(data.messages)
           ? data.messages.map(normalizeHistoryMessage)
           : [];
@@ -656,6 +668,11 @@ Page({
         break;
       }
       case 'message.send': {
+        // Agent isolation: ignore messages from other agents
+        var msgAgentId = data.agentId;
+        if (msgAgentId && this.data.activeChatId && msgAgentId !== this.data.activeChatId) {
+          break;
+        }
         var nextMessage = normalizeOutboundMessage(data);
         this.hideThinkingIndicator();
         this.upsertMessage(nextMessage);
@@ -664,15 +681,28 @@ Page({
         else incrementAgentUnread(this.data.activeChatId, 1);
         break;
       }
-      case 'thinking.start':
-        this.showThinkingIndicator(data.content);
+      case 'thinking.start': {
+        // Agent isolation: only accept thinking for current agent
+        var thinkStartAgentId = data.agentId;
+        if (!thinkStartAgentId || !this.data.activeChatId || thinkStartAgentId === this.data.activeChatId) {
+          this.showThinkingIndicator(data.content);
+        }
         break;
-      case 'thinking.update':
-        this.showThinkingIndicator(data.content);
+      }
+      case 'thinking.update': {
+        var thinkUpdateAgentId = data.agentId;
+        if (!thinkUpdateAgentId || !this.data.activeChatId || thinkUpdateAgentId === this.data.activeChatId) {
+          this.showThinkingIndicator(data.content);
+        }
         break;
-      case 'thinking.end':
-        this.hideThinkingIndicator();
+      }
+      case 'thinking.end': {
+        var thinkEndAgentId = data.agentId;
+        if (!thinkEndAgentId || !this.data.activeChatId || thinkEndAgentId === this.data.activeChatId) {
+          this.hideThinkingIndicator();
+        }
         break;
+      }
       // Delivery status updates — handler ready, waiting for server to emit these events
       case 'status.delivered':
       case 'status.read': {
