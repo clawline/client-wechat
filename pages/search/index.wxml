@@ -2,7 +2,7 @@
   <view class="screen">
     <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
       <view class="search-body" style="padding-top: {{contentTopInset}}px;">
-        <text class="screen-title">Search</text>
+        <text class="screen-title">搜索</text>
 
         <view class="search-field search-field--lg">
           <oc-icon name="search" tone="dark" size="34rpx" extraClass="search-field__icon" />
@@ -10,7 +10,7 @@
             class="search-field__input"
             value="{{searchScreenQuery}}"
             focus="{{true}}"
-            placeholder="Search messages..."
+            placeholder="搜索消息..."
             placeholder-style="color: rgba(45, 52, 54, 0.35);"
             bindinput="handleSearchInput"
           />
@@ -32,15 +32,15 @@
             </view>
           </view>
           <view wx:else class="search-empty">
-            <text class="search-empty__text">No messages found</text>
+            <text class="search-empty__text">未找到消息</text>
           </view>
-          <text class="search-result-count">{{searchResultCount}} result{{searchResultCount !== 1 ? 's' : ''}}</text>
+          <text class="search-result-count">共 {{searchResultCount}} 条结果</text>
         </block>
 
         <!-- Initial state: quick filters -->
         <block wx:else>
           <view class="search-section">
-            <text class="section-caption">Quick Filters</text>
+            <text class="section-caption">快速筛选</text>
             <view class="search-filters">
               <view
                 wx:for="{{quickFilters}}"
@@ -58,7 +58,7 @@
 
           <view class="search-empty-hero">
             <oc-icon name="search" tone="dark" size="80rpx" />
-            <text class="search-empty-hero__text">Search across your conversations</text>
+            <text class="search-empty-hero__text">搜索所有对话记录</text>
           </view>
         </block>
       </view>

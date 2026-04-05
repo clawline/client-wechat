@@ -1,3 +1,6 @@
+const { normalizeError } = require('./errors');
+const outbox = require('./outbox');
+
 const STORAGE_KEYS = {
   senderId: 'openclaw.generic.senderId',
   senderName: 'openclaw.generic.senderName',
@@ -8,6 +11,8 @@ const STORAGE_KEYS = {
 const DEFAULT_WS_URL = '';
 const MAX_RECONNECT_ATTEMPTS = 6;
 const CLOSE_CODE_NORMAL = 1000;
+const HEARTBEAT_INTERVAL_MS = 25 * 1000; // 25s — keep alive through proxies
+const HEARTBEAT_TIMEOUT_MS = 10 * 1000;  // 10s — if no pong, consider dead
 
 function safeGetStorage(key) {
   try {
@@ -80,18 +85,21 @@ function buildSocketUrl(serverUrl, chatId, agentId, token) {
 }
 
 function buildInboundMessage(params) {
-  const { chatId, senderId, senderName, chatType = 'direct', content, parentId, agentId } = params;
+  const { chatId, senderId, senderName, chatType = 'direct', content, parentId, quotedText, agentId, messageId, timestamp, messageType, mediaUrl, mimeType } = params;
   return {
-    messageId: createStableId('msg'),
+    messageId: messageId || createStableId('msg'),
     chatId,
     chatType,
     senderId,
     senderName,
-    messageType: 'text',
+    messageType: messageType || 'text',
     content,
-    timestamp: Date.now(),
+    mediaUrl: mediaUrl || '',
+    mimeType: mimeType || '',
+    timestamp: timestamp || Date.now(),
     ...(agentId ? { agentId } : {}),
     ...(parentId ? { parentId } : {}),
+    ...(quotedText ? { quotedText } : {}),
   };
 }
 
@@ -104,24 +112,30 @@ class GenericChannelClient {
     this.senderName = options.senderName;
     this.agentId = options.agentId || '';
     this.authToken = options.token || '';
+    this.connectionId = options.connectionId || '';
     this.onEvent = options.onEvent;
     this.onStatusChange = options.onStatusChange;
     this.onError = options.onError;
+    this.onOutboxFlush = options.onOutboxFlush;
     this.socketTask = null;
     this.connectionToken = 0;
     this.reconnectAttempts = 0;
     this.reconnectTimer = null;
+    this.heartbeatTimer = null;
+    this.heartbeatPending = false;
     this.manualClose = false;
     this.status = 'disconnected';
   }
 
   updateStatus(status, detail = '') {
+    const previousStatus = this.status;
     this.status = status;
     if (typeof this.onStatusChange === 'function') {
       this.onStatusChange({
         status,
         detail,
         reconnectAttempts: this.reconnectAttempts,
+        previousStatus,
       });
     }
   }
@@ -151,10 +165,34 @@ class GenericChannelClient {
     const nextStatus = this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting';
     this.updateStatus(nextStatus);
 
-    const socketTask = wx.connectSocket({
-      url: buildSocketUrl(this.serverUrl, this.chatId, this.agentId, this.authToken),
-      timeout: 10000,
-    });
+    const finalUrl = buildSocketUrl(this.serverUrl, this.chatId, this.agentId, this.authToken);
+    console.log('[GenericChannel] connecting to:', finalUrl);
+
+    let socketTask;
+    try {
+      socketTask = wx.connectSocket({
+        url: finalUrl,
+        timeout: 10000,
+        fail: (err) => {
+          console.error('[GenericChannel] wx.connectSocket fail:', JSON.stringify(err));
+          if (this.connectionToken !== token) return;
+          this.socketTask = null;
+          this.emitError(err, 'connect');
+          // Trigger reconnect via status update
+          this.updateStatus('disconnected', (err && err.errMsg) || '连接失败');
+        },
+      });
+    } catch (e) {
+      console.error('[GenericChannel] wx.connectSocket threw:', e);
+      this.updateStatus('disconnected', '连接异常');
+      return;
+    }
+
+    if (!socketTask) {
+      console.error('[GenericChannel] wx.connectSocket returned falsy');
+      this.updateStatus('disconnected', '连接失败');
+      return;
+    }
 
     this.socketTask = socketTask;
 
@@ -162,24 +200,33 @@ class GenericChannelClient {
       if (this.connectionToken !== token || this.socketTask !== socketTask) return;
       this.reconnectAttempts = 0;
       this.updateStatus('connected');
+      this.startHeartbeat();
+      this.flushOfflineQueue();
     });
 
     socketTask.onMessage((response) => {
       if (this.connectionToken !== token || this.socketTask !== socketTask) return;
+      // Any message from server means connection is alive
+      this.heartbeatPending = false;
 
       try {
         const packet = JSON.parse(response.data);
-        // Update chatId from server response (server may assign/override based on token)
+        // Heartbeat response — silently consume, don't forward to UI
+        if (packet.type === 'pong') return;
+        // Suggestion response — handle internally via callback
+        if (this.handleSuggestionResponse(packet)) return;
         if (packet.type === 'connection.open' && packet.data && packet.data.chatId) {
           this.chatId = packet.data.chatId;
+          // Persist server-assigned chatId to connection storage so it survives app restarts
+          if (this.connectionId) {
+            updateServerConnection(this.connectionId, { chatId: packet.data.chatId });
+          }
         }
         if (typeof this.onEvent === 'function') {
           this.onEvent(packet);
         }
       } catch (error) {
-        if (typeof this.onError === 'function') {
-          this.onError('Failed to parse server message.');
-        }
+        this.emitError(error, 'socket');
       }
     });
 
@@ -194,7 +241,7 @@ class GenericChannelClient {
 
       const shouldReconnect = this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
       if (!shouldReconnect) {
-        this.updateStatus('disconnected', response.reason || 'Connection closed.');
+        this.updateStatus('disconnected', response.reason || '连接已关闭');
         return;
       }
 
@@ -212,15 +259,61 @@ class GenericChannelClient {
 
     socketTask.onError((error = {}) => {
       if (this.connectionToken !== token || this.socketTask !== socketTask) return;
-      if (typeof this.onError === 'function') {
-        this.onError(error.errMsg || 'Socket connection failed.');
-      }
+      this.emitError(error, 'socket');
     });
+  }
+
+  emitError(error, source) {
+    const msg = normalizeError(error, source);
+    console.error('[GenericChannel] error:', msg);
+    if (typeof this.onError === 'function') {
+      this.onError(msg);
+    }
+  }
+
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.isOpen()) {
+        this.stopHeartbeat();
+        return;
+      }
+      // If previous heartbeat never got a response, connection is dead
+      if (this.heartbeatPending) {
+        this.heartbeatPending = false;
+        this.stopHeartbeat();
+        // Force close and trigger reconnect
+        try { this.socketTask.close({ code: 4000, reason: 'Heartbeat timeout' }); } catch (e) {}
+        return;
+      }
+      this.heartbeatPending = true;
+      try {
+        this.socketTask.send({
+          data: JSON.stringify({ type: 'ping', data: { timestamp: Date.now() } }),
+          fail: () => {
+            this.stopHeartbeat();
+            try { this.socketTask.close({ code: 4000, reason: 'Heartbeat send failed' }); } catch (e) {}
+          },
+        });
+      } catch (e) {
+        this.stopHeartbeat();
+        try { this.socketTask.close({ code: 4000, reason: 'Heartbeat send failed' }); } catch (e2) {}
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    this.heartbeatPending = false;
   }
 
   close(manual = true) {
     this.manualClose = manual;
     this.clearReconnectTimer();
+    this.stopHeartbeat();
     this.connectionToken += 1;
 
     const socketTask = this.socketTask;
@@ -248,11 +341,22 @@ class GenericChannelClient {
     this.connect();
   }
 
-  sendText(content, parentId) {
+  sendPacket(packet, source) {
     if (!this.isOpen()) {
-      throw new Error('Socket is not connected.');
+      const error = new Error('Socket is not connected.');
+      error.code = 'NOT_CONNECTED';
+      throw error;
     }
 
+    this.socketTask.send({
+      data: JSON.stringify(packet),
+      fail: (error) => {
+        this.emitError(error || new Error('Failed to send message.'), source || 'send');
+      },
+    });
+  }
+
+  sendText(content, parentId, options = {}) {
     const payload = buildInboundMessage({
       chatId: this.chatId,
       senderId: this.senderId,
@@ -260,22 +364,69 @@ class GenericChannelClient {
       chatType: this.chatType,
       content,
       parentId,
+      quotedText: options.quotedText,
       agentId: this.agentId,
+      messageId: options.messageId,
+      timestamp: options.timestamp,
     });
 
-    this.socketTask.send({
-      data: JSON.stringify({
-        type: 'message.receive',
-        data: payload,
-      }),
-      fail: () => {
-        if (typeof this.onError === 'function') {
-          this.onError('Failed to send message.');
-        }
-      },
-    });
-
+    this.sendPacket({ type: 'message.receive', data: payload }, 'send');
     return payload;
+  }
+
+  enqueueText(content, parentId, options = {}) {
+    if (!this.connectionId || !this.chatId) {
+      const error = new Error('Outbox unavailable');
+      error.code = 'STORAGE_FAILED';
+      throw error;
+    }
+
+    return outbox.enqueue(this.connectionId, this.chatId, {
+      id: options.messageId || createStableId('msg'),
+      connectionId: this.connectionId,
+      chatId: this.chatId,
+      agentId: this.agentId,
+      kind: 'text',
+      content,
+      parentId: parentId || '',
+      createdAt: options.timestamp || Date.now(),
+    });
+  }
+
+  sendTextWithParent(content, parentId, quotedText, options = {}) {
+    return this.sendText(content, parentId, { ...options, quotedText });
+  }
+
+  sendMedia(opts = {}) {
+    const payload = buildInboundMessage({
+      chatId: this.chatId,
+      senderId: this.senderId,
+      senderName: this.senderName,
+      chatType: this.chatType,
+      content: opts.content || '',
+      parentId: opts.parentId,
+      agentId: this.agentId,
+      messageId: opts.messageId,
+      timestamp: opts.timestamp,
+      messageType: opts.messageType || 'image',
+      mediaUrl: opts.mediaUrl,
+      mimeType: opts.mimeType,
+    });
+
+    this.sendPacket({ type: 'message.receive', data: payload }, 'media');
+    return payload;
+  }
+
+  sendFile(opts = {}) {
+    return this.sendMedia({
+      messageType: 'file',
+      content: opts.content || opts.fileName || 'File',
+      mediaUrl: opts.mediaUrl,
+      mimeType: opts.mimeType,
+      messageId: opts.messageId,
+      timestamp: opts.timestamp,
+      parentId: opts.parentId,
+    });
   }
 
   sendRaw(packet) {
@@ -330,56 +481,6 @@ class GenericChannelClient {
     });
   }
 
-  sendTextWithParent(content, parentId) {
-    if (!this.isOpen()) {
-      throw new Error('Socket is not connected.');
-    }
-
-    var payload = buildInboundMessage({
-      chatId: this.chatId,
-      senderId: this.senderId,
-      senderName: this.senderName,
-      chatType: this.chatType,
-      content: content,
-      parentId: parentId,
-      agentId: this.agentId,
-    });
-
-    this.socketTask.send({
-      data: JSON.stringify({ type: 'message.receive', data: payload }),
-      fail: function () {},
-    });
-
-    return payload;
-  }
-
-  sendMedia(opts) {
-    if (!this.isOpen()) {
-      throw new Error('Socket is not connected.');
-    }
-
-    var payload = {
-      messageId: createStableId('msg'),
-      chatId: this.chatId,
-      chatType: this.chatType,
-      senderId: this.senderId,
-      senderName: this.senderName,
-      messageType: opts.messageType || 'image',
-      content: opts.content || '',
-      mediaUrl: opts.mediaUrl,
-      mimeType: opts.mimeType,
-      timestamp: Date.now(),
-    };
-    if (this.agentId) payload.agentId = this.agentId;
-
-    this.socketTask.send({
-      data: JSON.stringify({ type: 'message.receive', data: payload }),
-      fail: function () {},
-    });
-
-    return payload;
-  }
-
   requestConversationList(agentId) {
     this.sendRaw({
       type: 'conversation.list.get',
@@ -390,13 +491,18 @@ class GenericChannelClient {
     });
   }
 
-  requestHistory(chatId) {
+  requestHistory(chatId, agentId, opts) {
+    var historyOpts = opts || {};
+    var historyData = {
+      requestId: createStableId('history'),
+      chatId: chatId,
+    };
+    if (agentId) historyData.agentId = agentId;
+    if (historyOpts.limit) historyData.limit = historyOpts.limit;
+    if (historyOpts.before) historyData.before = historyOpts.before;
     this.sendRaw({
       type: 'history.get',
-      data: {
-        requestId: createStableId('history'),
-        chatId: chatId,
-      },
+      data: historyData,
     });
   }
 
@@ -404,7 +510,7 @@ class GenericChannelClient {
     this.sendRaw({
       type: 'message.edit',
       data: {
-        messageId: messageId,
+        messageId,
         chatId: this.chatId,
         senderId: this.senderId,
         content: newContent,
@@ -417,12 +523,63 @@ class GenericChannelClient {
     this.sendRaw({
       type: 'message.delete',
       data: {
-        messageId: messageId,
+        messageId,
         chatId: this.chatId,
         senderId: this.senderId,
         timestamp: Date.now(),
       },
     });
+  }
+
+  /**
+   * Request AI-generated reply suggestions based on recent conversation.
+   * Server responds with suggestion.response packet.
+   * @param {Array<{role: string, text: string}>} messages - Recent messages
+   * @param {function} callback - Called with string[] suggestions
+   * @returns {string} requestId for correlation
+   */
+  requestSuggestions(messages, callback) {
+    var requestId = createStableId('suggestion');
+    // Store pending callback
+    if (!this._pendingSuggestions) this._pendingSuggestions = {};
+    // Timeout after 10s
+    var self = this;
+    var timer = setTimeout(function () {
+      if (self._pendingSuggestions && self._pendingSuggestions[requestId]) {
+        delete self._pendingSuggestions[requestId];
+        if (typeof callback === 'function') callback([]);
+      }
+    }, 10000);
+    this._pendingSuggestions[requestId] = { callback: callback, timer: timer };
+    this.sendRaw({
+      type: 'suggestion.get',
+      data: {
+        requestId: requestId,
+        messages: (messages || []).slice(-6).map(function (m) {
+          return { role: m.role, text: (m.text || '').slice(0, 300) };
+        }),
+      },
+    });
+    return requestId;
+  }
+
+  /**
+   * Handle suggestion.response packet. Call from onMessage handler.
+   * @returns {boolean} true if packet was handled
+   */
+  handleSuggestionResponse(packet) {
+    if (!packet || packet.type !== 'suggestion.response') return false;
+    var data = packet.data || {};
+    var requestId = data.requestId;
+    if (!requestId || !this._pendingSuggestions || !this._pendingSuggestions[requestId]) return false;
+    var pending = this._pendingSuggestions[requestId];
+    clearTimeout(pending.timer);
+    delete this._pendingSuggestions[requestId];
+    var suggestions = Array.isArray(data.suggestions)
+      ? data.suggestions.filter(function (s) { return typeof s === 'string'; })
+      : [];
+    if (typeof pending.callback === 'function') pending.callback(suggestions);
+    return true;
   }
 
   sendTyping(isTyping) {
@@ -437,39 +594,65 @@ class GenericChannelClient {
     });
   }
 
-  sendFile(opts) {
-    if (!this.isOpen()) {
-      throw new Error('Socket is not connected.');
+  flushOfflineQueue() {
+    if (!this.connectionId || !this.chatId || !this.isOpen() || !outbox.canFlush(this.connectionId, this.chatId)) return;
+
+    const items = outbox.list(this.connectionId, this.chatId);
+    const sent = [];
+    const failed = [];
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (!item || item.inFlight) continue;
+
+      try {
+        outbox.markInFlight(this.connectionId, this.chatId, item.id, true);
+
+        if (item.kind === 'text') {
+          this.sendText(item.content, item.parentId, {
+            messageId: item.id,
+            timestamp: item.createdAt,
+          });
+        } else if (item.kind === 'media') {
+          this.sendMedia({
+            messageId: item.id,
+            timestamp: item.createdAt,
+            messageType: item.messageType || 'image',
+            content: item.content || '',
+            mediaUrl: item.mediaUrl,
+            mimeType: item.mimeType,
+            parentId: item.parentId,
+          });
+        } else if (item.kind === 'file') {
+          this.sendFile({
+            messageId: item.id,
+            timestamp: item.createdAt,
+            content: item.content || '',
+            fileName: item.fileName,
+            mediaUrl: item.mediaUrl,
+            mimeType: item.mimeType,
+            parentId: item.parentId,
+          });
+        }
+
+        outbox.remove(this.connectionId, this.chatId, item.id);
+        sent.push(item);
+      } catch (error) {
+        outbox.clearInFlight(this.connectionId, this.chatId);
+        failed.push({ item, error });
+        break;
+      }
     }
 
-    var payload = {
-      messageId: createStableId('msg'),
-      chatId: this.chatId,
-      chatType: this.chatType,
-      senderId: this.senderId,
-      senderName: this.senderName,
-      messageType: 'file',
-      content: opts.content || opts.fileName || 'File',
-      mediaUrl: opts.mediaUrl,
-      mimeType: opts.mimeType,
-      timestamp: Date.now(),
-    };
-    if (this.agentId) payload.agentId = this.agentId;
-
-    this.socketTask.send({
-      data: JSON.stringify({ type: 'message.receive', data: payload }),
-      fail: function () {},
-    });
-
-    return payload;
+    if (typeof this.onOutboxFlush === 'function' && (sent.length || failed.length)) {
+      this.onOutboxFlush({ sent, failed, remaining: outbox.list(this.connectionId, this.chatId) });
+    }
   }
 }
 
 function createGenericChannelClient(options) {
   return new GenericChannelClient(options);
 }
-
-/* ---- Multi-server connection storage ---- */
 
 const CONNECTIONS_KEY = 'openclaw.connections';
 const ACTIVE_CONN_KEY = 'openclaw.activeConnectionId';
@@ -550,6 +733,7 @@ module.exports = {
   DEFAULT_WS_URL,
   buildConversationId,
   createGenericChannelClient,
+  createStableId,
   getStoredConnectionSettings,
   saveConnectionSettings,
   getServerConnections,

@@ -2,13 +2,13 @@
   <view class="screen">
     <view class="screen-header screen-header--sticky" style="padding-top: {{navBarPaddingTop}}px; min-height: {{navBarHeight}}px;">
       <view class="screen-header__row screen-header__row--capsule-safe" style="padding-right: {{capsuleSafeInsetRight}}px;">
-        <text class="screen-title">Agents</text>
+        <text class="screen-title">智能体</text>
         <view class="agent-header-actions">
-          <view class="icon-button icon-button--small" bindtap="handleRefreshAgents" hover-class="button-pressed">
-            <text class="agent-refresh-icon">🔄</text>
+          <view class="icon-button icon-button--small" bindtap="handleToggleView" hover-class="button-pressed">
+            <text class="agent-view-icon">{{viewMode === 'grid' ? '☰' : '⊞'}}</text>
           </view>
-          <view wx:if="{{activeServerName}}" class="agent-server-badge">
-            <text class="agent-server-badge__text">{{activeServerName}}</text>
+          <view class="icon-button icon-button--small" bindtap="handleRefreshAgents" hover-class="button-pressed">
+            <text class="agent-refresh-icon">↻</text>
           </view>
         </view>
       </view>
@@ -19,7 +19,7 @@
         </view>
         <input
           value="{{searchQuery}}"
-          placeholder="Search agents..."
+          placeholder="搜索智能体..."
           placeholder-style="color: rgba(45, 52, 54, 0.35);"
           class="search-field__input"
           bindinput="handleSearchInput"
@@ -28,44 +28,77 @@
     </view>
 
     <scroll-view class="screen-scroll screen-scroll--with-nav" scroll-y>
-      <view class="chat-list">
-        <!-- Loading state -->
-        <view wx:if="{{loading}}" class="agent-loading">
-          <text class="agent-loading__text">Loading agents…</text>
-        </view>
+      <!-- Loading -->
+      <view wx:if="{{loading}}" class="agent-loading">
+        <text class="agent-loading__text">加载中…</text>
+      </view>
 
-        <!-- No server -->
-        <view wx:elif="{{!activeServerName}}" class="empty-state">
-          <text class="empty-state__title">No server connected</text>
-          <text class="empty-state__desc">Add a server in Profile to get started</text>
-        </view>
+      <!-- No server -->
+      <view wx:elif="{{!activeServerName}}" class="empty-state">
+        <text class="empty-state__icon">🔗</text>
+        <text class="empty-state__title">未连接服务器</text>
+        <text class="empty-state__desc">请在「设置」中添加服务器</text>
+      </view>
 
-        <!-- Agent list -->
-        <block wx:else>
-          <view
-            wx:for="{{displayedAgents}}"
-            wx:key="id"
-            class="agent-card"
-            style="animation-delay: {{index * 60}}ms;"
-            data-agent-id="{{item.id}}"
-            bindtap="handleAgentTap"
-            hover-class="agent-card--pressed"
-          >
-            <view class="agent-card__avatar">
-              <text class="agent-card__emoji">{{item.identityEmoji || '🤖'}}</text>
-              <view wx:if="{{item.isDefault}}" class="agent-card__crown">
-                <text class="agent-card__crown-icon">👑</text>
+      <!-- Grouped by server -->
+      <view wx:else class="agent-groups">
+        <block wx:for="{{serverGroups}}" wx:key="serverId" wx:for-item="group">
+          <!-- Server section header (always show when multi-server) -->
+          <view wx:if="{{multiServer}}" class="server-section-header">
+            <view class="server-section-dot"></view>
+            <text class="server-section-name">{{group.serverName}}</text>
+            <text class="server-section-count">{{group.agents.length}}</text>
+          </view>
+
+          <!-- Grid view -->
+          <view wx:if="{{viewMode === 'grid'}}" class="agent-grid">
+            <view
+              wx:for="{{group.agents}}"
+              wx:key="id"
+              class="agent-grid-card"
+              style="animation-delay: {{index * 40}}ms;"
+              data-agent-id="{{item.id}}"
+              bindtap="handleAgentTap"
+              hover-class="agent-grid-card--pressed"
+            >
+              <view class="agent-grid-card__avatar">
+                <text class="agent-grid-card__emoji">{{item.identityEmoji || '🤖'}}</text>
               </view>
-            </view>
-            <view class="agent-card__body">
-              <view class="agent-card__head">
-                <text class="agent-card__name">{{item.name}}</text>
-              </view>
-              <text class="agent-card__model">{{item.model || 'Agent: ' + item.id}}</text>
+              <text class="agent-grid-card__name">{{item.name}}</text>
+              <text wx:if="{{item.isDefault}}" class="agent-grid-card__badge">默认</text>
             </view>
           </view>
-          <view wx:if="{{!displayedAgents.length}}" class="empty-state">No agents found</view>
+
+          <!-- List view -->
+          <view wx:else class="agent-list-section">
+            <view
+              wx:for="{{group.agents}}"
+              wx:key="id"
+              class="agent-card"
+              style="animation-delay: {{index * 50}}ms;"
+              data-agent-id="{{item.id}}"
+              bindtap="handleAgentTap"
+              hover-class="agent-card--pressed"
+            >
+              <view class="agent-card__avatar">
+                <text class="agent-card__emoji">{{item.identityEmoji || '🤖'}}</text>
+              </view>
+              <view class="agent-card__body">
+                <view class="agent-card__head">
+                  <text class="agent-card__name">{{item.name}}</text>
+                  <text wx:if="{{item.isDefault}}" class="agent-card__badge">默认</text>
+                </view>
+                <text class="agent-card__model">{{item.model || item.id}}</text>
+              </view>
+            </view>
+          </view>
         </block>
+
+        <!-- Empty after search filter -->
+        <view wx:if="{{!serverGroups.length && displayedAgents.length === 0}}" class="empty-state">
+          <text class="empty-state__icon">🔍</text>
+          <text class="empty-state__title">未找到智能体</text>
+        </view>
       </view>
     </scroll-view>
   </view>

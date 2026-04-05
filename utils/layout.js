@@ -20,12 +20,18 @@ function isDarkMode() {
 }
 
 function getPageChromeData() {
-  const systemInfo = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {};
-  const screenWidth = systemInfo.screenWidth || 375;
-  const statusBarHeight = systemInfo.statusBarHeight || 20;
-  const safeAreaTop = systemInfo.safeArea ? systemInfo.safeArea.top || statusBarHeight : statusBarHeight;
-  const safeAreaBottom = systemInfo.safeArea
-    ? Math.max(systemInfo.screenHeight - systemInfo.safeArea.bottom, 0)
+  // Use new granular APIs (wx.getSystemInfoSync is deprecated since base lib 2.20.1)
+  const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : {};
+  const deviceInfo = wx.getDeviceInfo ? wx.getDeviceInfo() : {};
+  const appBaseInfo = wx.getAppBaseInfo ? wx.getAppBaseInfo() : {};
+
+  const screenWidth = windowInfo.screenWidth || 375;
+  const statusBarHeight = windowInfo.statusBarHeight || 20;
+  const safeArea = windowInfo.safeArea;
+  const screenHeight = windowInfo.screenHeight || 667;
+  const safeAreaTop = safeArea ? safeArea.top || statusBarHeight : statusBarHeight;
+  const safeAreaBottom = safeArea
+    ? Math.max(screenHeight - safeArea.bottom, 0)
     : 0;
   const menuButtonRect = wx.getMenuButtonBoundingClientRect ? wx.getMenuButtonBoundingClientRect() : null;
   const menuGap = menuButtonRect ? Math.max(menuButtonRect.top - statusBarHeight, 6) : 8;

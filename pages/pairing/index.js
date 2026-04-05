@@ -1,7 +1,7 @@
 const { DEFAULT_PAGE_CHROME, getPageChromeData } = require('../../utils/layout');
 const { getConnectionState, getPreferenceForm, saveConnectionState, updatePreferenceForm } = require('../../utils/app-state');
 const { navigateToScreen } = require('../../utils/routes');
-const { addServerConnection, setActiveConnectionId } = require('../../utils/clawline');
+const { addServerConnection, setActiveConnectionId } = require('../../utils/generic-channel');
 
 /**
  * Parse a connection URL:
@@ -40,18 +40,78 @@ function parseQueryParams(urlStr, serverUrlOverride) {
   var qs = urlStr.slice(qIdx + 1);
   var params = {};
   qs.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (kv.length === 2) {
-      params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+    var eqIdx = pair.indexOf('=');
+    if (eqIdx > 0) {
+      var key = decodeURIComponent(pair.slice(0, eqIdx).replace(/\+/g, ' '));
+      var val = decodeURIComponent(pair.slice(eqIdx + 1).replace(/\+/g, ' '));
+      params[key] = val;
     }
   });
   return {
     serverUrl: serverUrlOverride || params.serverUrl || '',
     token: params.token || '',
-    chatId: params.chatId || '',
+    chatId: params.chatId || params.channelId || '',
     senderId: params.senderId || '',
-    displayName: params.name || '',
+    // channelName = server name (e.g. "🪴 Ottor")
+    // displayName = user display name (e.g. "🪴 Ottor/tiger")
+    channelName: params.channelName || '',
+    displayName: params.displayName || params.name || '',
   };
+}
+
+// Extract a friendly name from hostname:
+//   relay.restry.cn → Relay
+//   gw.dev.dora.restry.cn → Gw Dev Dora
+//   192.168.1.1 → 192.168.1.1
+function friendlyName(hostname) {
+  if (!hostname) return 'Server';
+  // If it's an IP address, return as-is
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return hostname;
+  // Take the subdomain part(s) before the registrable domain
+  var parts = hostname.split('.');
+  // For "relay.restry.cn" → take "relay"; for "gw.dev.dora.restry.cn" → take "gw.dev.dora"
+  // Simple heuristic: drop last 2 parts (TLD + domain), capitalize the rest
+  if (parts.length <= 2) return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  var meaningful = parts.slice(0, -2);
+  return meaningful.map(function (p) {
+    return p.charAt(0).toUpperCase() + p.slice(1);
+  }).join(' ');
+}
+
+/**
+ * Derive a server label from a parsed connection URL.
+ * Priority: channelName > hostname-based friendly name.
+ */
+function resolveServerLabel(parsed) {
+  if (parsed.channelName) return parsed.channelName;
+  var hostname = '';
+  try {
+    var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
+    hostname = match ? match[1] : 'Server';
+  } catch (e) { hostname = 'Server'; }
+  return friendlyName(hostname);
+}
+
+/**
+ * Save a parsed connection and navigate to chats.
+ * Shared by URL login, QR scan, and manual pairing flows.
+ *
+ * Server label (channelName / hostname) is used for the connection name.
+ * User display name (displayName param) is stored separately so a server
+ * label never overwrites the user's sender identity.
+ */
+function activateParsedConnection(parsed) {
+  var serverLabel = resolveServerLabel(parsed);
+  var userDisplayName = parsed.displayName || serverLabel;
+  saveConnectionState({
+    displayName: userDisplayName,
+    serverUrl: parsed.serverUrl,
+    isPaired: true,
+  });
+  var conn = addServerConnection(serverLabel, parsed.serverUrl, userDisplayName, parsed.token, parsed.chatId, parsed.senderId);
+  setActiveConnectionId(conn.id);
+  wx.showToast({ title: 'Server connected!', icon: 'none' });
+  navigateToScreen('chats');
 }
 
 Page({
@@ -97,24 +157,7 @@ Page({
       this.setData({ urlError: 'Invalid URL. Use ws:// or openclaw:// format.' });
       return;
     }
-    var hostname = '';
-    try {
-      var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
-      hostname = match ? match[1] : 'Server';
-    } catch (e) { hostname = 'Server'; }
-    var connName = parsed.displayName || hostname;
-
-    saveConnectionState({
-      displayName: connName,
-      serverUrl: parsed.serverUrl,
-      isPaired: true,
-    });
-
-    var conn = addServerConnection(connName, parsed.serverUrl, connName, parsed.token, parsed.chatId, parsed.senderId);
-    setActiveConnectionId(conn.id);
-
-    wx.showToast({ title: 'Server connected!', icon: 'none' });
-    navigateToScreen('chats');
+    activateParsedConnection(parsed);
   },
 
   handlePasteUrl() {
@@ -135,24 +178,7 @@ Page({
         var value = res.result || '';
         var parsed = parseConnectionUrl(value);
         if (parsed && parsed.serverUrl) {
-          var hostname = '';
-          try {
-            var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
-            hostname = match ? match[1] : 'Server';
-          } catch (e) { hostname = 'Server'; }
-          var connName = parsed.displayName || hostname;
-
-          saveConnectionState({
-            displayName: connName,
-            serverUrl: parsed.serverUrl,
-            isPaired: true,
-          });
-
-          var conn = addServerConnection(connName, parsed.serverUrl, connName, parsed.token, parsed.chatId, parsed.senderId);
-          setActiveConnectionId(conn.id);
-
-          wx.showToast({ title: 'Server connected!', icon: 'none' });
-          navigateToScreen('chats');
+          activateParsedConnection(parsed);
         } else {
           // Put scanned text into URL input for manual review
           this.setData({
@@ -198,22 +224,19 @@ Page({
       return;
     }
 
-    saveConnectionState({
-      displayName,
+    activateParsedConnection({
       serverUrl,
-      isPaired: true,
+      token,
+      chatId,
+      senderId,
+      channelName: displayName,
+      displayName: displayName,
     });
-
-    const conn = addServerConnection(displayName, serverUrl, displayName, token, chatId, senderId);
-    setActiveConnectionId(conn.id);
 
     updatePreferenceForm({
       ...this.data.preferenceForm,
       displayName,
       genericChannelUrl: serverUrl,
     });
-
-    wx.showToast({ title: 'Server connected!', icon: 'none' });
-    navigateToScreen('chats');
   },
 });

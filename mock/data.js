@@ -43,19 +43,19 @@ const RECENT_SEARCHES = [];
 
 const QUICK_FILTERS = [
   { id: 'commands', label: '/', icon: 'command', tone: 'purple' },
-  { id: 'images', label: '[Image]', icon: 'file-text', tone: 'blue' },
-  { id: 'voice', label: '[Voice]', icon: 'message-square', tone: 'green' },
+  { id: 'images', label: '图片', icon: 'file-text', tone: 'blue' },
+  { id: 'voice', label: '语音', icon: 'message-square', tone: 'green' },
 ];
 
 const PROFILE_GROUPS = [
   [
-    { key: 'darkMode', icon: 'moon', label: 'Dark Mode', hasToggle: true, active: false },
-    { key: 'pushNotifications', icon: 'bell', label: 'Push Notifications', hasToggle: true, active: true },
-    { key: 'inAppNotifications', icon: 'smartphone', label: 'In-App Notifications', hasToggle: true, active: true },
-    { key: 'storage', icon: 'hard-drive', label: 'Storage Management', value: '2.4 GB' },
+    { key: 'darkMode', icon: 'moon', label: '深色模式', hasToggle: true, active: false },
+    { key: 'pushNotifications', icon: 'bell', label: '推送通知', hasToggle: true, active: true },
+    { key: 'inAppNotifications', icon: 'smartphone', label: '应用内通知', hasToggle: true, active: true },
+    { key: 'storage', icon: 'hard-drive', label: '存储管理', value: '2.4 GB' },
   ],
   [
-    { key: 'preferences', icon: 'settings', label: 'Preferences', navigateTo: 'preferences' },
+    { key: 'preferences', icon: 'settings', label: '偏好设置', navigateTo: 'preferences' },
   ],
 ];
 

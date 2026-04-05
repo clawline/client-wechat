@@ -2,47 +2,39 @@ const { parseMarkdown } = require('../../utils/markdown');
 
 Component({
   properties: {
-    message: {
-      type: Object,
-      value: {},
-    },
-    agentEmoji: {
-      type: String,
-      value: '🤖',
-    },
-    isActive: {
-      type: Boolean,
-      value: false,
-    },
-    delay: {
-      type: Number,
-      value: 0,
-    },
+    message: { type: Object, value: {} },
+    messages: { type: Array, value: [] },
+    agentEmoji: { type: String, value: '🤖' },
+    agentName: { type: String, value: '' },
+    grouped: { type: Boolean, value: false },
+    isActive: { type: Boolean, value: false },
+    delay: { type: Number, value: 0 },
   },
   observers: {
     'message.text, message.sender': function (text, sender) {
-      if (sender !== 'user' && text) {
-        this.setData({ mdNodes: parseMarkdown(text) });
-      } else {
-        this.setData({ mdNodes: [] });
-      }
+      if (sender !== 'user' && text) this.setData({ mdNodes: parseMarkdown(text) });
+      else this.setData({ mdNodes: [] });
     },
-    'message.replyTo': function (replyTo) {
-      // Find the quoted message text from the parent page's messages
-      if (!replyTo) {
+    'message.replyTo, message.quotedText, message.showReply, messages': function (replyTo, quotedText, showReply, messages) {
+      if (!replyTo || showReply === false) {
         this.setData({ replyToText: '' });
         return;
       }
-      var pages = getCurrentPages();
-      var currentPage = pages[pages.length - 1];
-      if (currentPage && currentPage.data && currentPage.data.messages) {
-        var quoted = currentPage.data.messages.find(function (m) { return m.id === replyTo; });
-        if (quoted) {
-          var text = (quoted.text || '').slice(0, 80);
-          if ((quoted.text || '').length > 80) text += '…';
-          this.setData({ replyToText: (quoted.sender === 'user' ? 'You' : 'Bot') + ': ' + text });
-        }
+      // Prefer quotedText from payload (server-provided), fallback to local message lookup
+      if (quotedText) {
+        var preview = quotedText.slice(0, 80);
+        if (quotedText.length > 80) preview += '…';
+        this.setData({ replyToText: preview });
+        return;
       }
+      var quoted = (messages || []).find(function (m) { return m.id === replyTo; });
+      if (!quoted) {
+        this.setData({ replyToText: '' });
+        return;
+      }
+      var text = (quoted.text || '').slice(0, 80);
+      if ((quoted.text || '').length > 80) text += '…';
+      this.setData({ replyToText: (quoted.sender === 'user' ? '我' : '对方') + ': ' + text });
     },
   },
   data: {
@@ -50,30 +42,19 @@ Component({
     replyToText: '',
   },
   methods: {
-    handleBubbleTap() {
-      this.triggerEvent('select', { messageId: this.properties.message.id });
-    },
-    handleLongPress() {
-      this.triggerEvent('reaction', { messageId: this.properties.message.id });
-    },
-    handleReactionTap() {
-      this.triggerEvent('reaction', { messageId: this.properties.message.id });
-    },
+    handleBubbleTap() { this.triggerEvent('select', { messageId: this.properties.message.id }); },
+    handleLongPress() { this.triggerEvent('reaction', { messageId: this.properties.message.id }); },
+    handleReactionTap() { this.triggerEvent('reaction', { messageId: this.properties.message.id }); },
     handleLinkTap(event) {
       const href = event.currentTarget.dataset.href;
       if (href) {
         wx.setClipboardData({ data: href });
-        wx.showToast({ title: 'Link copied', icon: 'none' });
+        wx.showToast({ title: '链接已复制', icon: 'none' });
       }
     },
-    handleEditTap() {
-      this.triggerEvent('editmsg', { messageId: this.properties.message.id });
-    },
-    handleDeleteTap() {
-      this.triggerEvent('deletemsg', { messageId: this.properties.message.id });
-    },
-    handleReplyTap() {
-      this.triggerEvent('replymsg', { messageId: this.properties.message.id });
-    },
+    handleEditTap() { this.triggerEvent('editmsg', { messageId: this.properties.message.id }); },
+    handleDeleteTap() { this.triggerEvent('deletemsg', { messageId: this.properties.message.id }); },
+    handleReplyTap() { this.triggerEvent('replymsg', { messageId: this.properties.message.id }); },
+    onRetryTap() { this.triggerEvent('retrymsg', { messageId: this.properties.message.id }); },
   },
 });

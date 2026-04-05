@@ -7,7 +7,7 @@
         </view>
       </view>
       <view class="screen-header__center">
-        <text class="screen-header__title">Preferences</text>
+        <text class="screen-header__title">偏好设置</text>
       </view>
       <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
     </view>
@@ -17,19 +17,19 @@
         <view class="preferences-section">
           <view class="section-caption section-caption--with-icon">
             <oc-icon name="user" tone="dark" size="24rpx" />
-            <text>Personal Info</text>
+            <text>个人信息</text>
           </view>
           <view class="form-card">
             <view class="form-field">
-              <text class="form-label">Display Name</text>
+              <text class="form-label">显示名称</text>
               <input class="form-input" value="{{preferenceForm.displayName}}" data-field="displayName" bindinput="handleInput" />
             </view>
             <view class="form-field">
-              <text class="form-label">Email Address</text>
+              <text class="form-label">邮箱地址</text>
               <input class="form-input" value="{{preferenceForm.email}}" data-field="email" bindinput="handleInput" />
             </view>
             <view class="form-field">
-              <text class="form-label">Generic Channel WS URL</text>
+              <text class="form-label">通道 WS 地址</text>
               <input class="form-input" value="{{preferenceForm.genericChannelUrl}}" data-field="genericChannelUrl" bindinput="handleInput" />
             </view>
           </view>
@@ -38,11 +38,11 @@
         <view class="preferences-section">
           <view class="section-caption section-caption--with-icon">
             <oc-icon name="sliders" tone="dark" size="24rpx" />
-            <text>AI Configuration</text>
+            <text>AI 配置</text>
           </view>
           <view class="form-card">
             <view class="form-field">
-              <text class="form-label">Default Model</text>
+              <text class="form-label">默认模型</text>
               <picker mode="selector" range="{{preferenceForm.modelOptions}}" value="{{preferenceForm.selectedModelIndex}}" bindchange="handleModelChange">
                 <view class="picker-field">
                   <text>{{preferenceForm.modelOptions[preferenceForm.selectedModelIndex]}}</text>
@@ -53,7 +53,7 @@
 
             <view class="form-field">
               <view class="slider-head">
-                <text class="form-label">Creativity (Temperature)</text>
+                <text class="form-label">创意度 (Temperature)</text>
                 <text class="slider-value">{{preferenceForm.temperature / 100}}</text>
               </view>
               <slider
@@ -67,19 +67,19 @@
                 bindchange="handleTemperatureChange"
               />
               <view class="slider-foot">
-                <text>Precise</text>
-                <text>Creative</text>
+                <text>精确</text>
+                <text>创意</text>
               </view>
             </view>
 
             <view class="form-field">
-              <text class="form-label">Custom System Prompt</text>
+              <text class="form-label">自定义系统提示词</text>
               <textarea
                 class="form-textarea"
                 auto-height
                 value="{{preferenceForm.systemPrompt}}"
                 data-field="systemPrompt"
-                placeholder="E.g., Always answer in TypeScript..."
+                placeholder="例如：总是用 TypeScript 回答..."
                 placeholder-style="color: rgba(45, 52, 54, 0.35);"
                 bindinput="handleInput"
               />
@@ -89,7 +89,7 @@
 
         <view class="primary-button primary-button--save" bindtap="handleSave" hover-class="button-pressed">
           <oc-icon name="save" tone="white" size="32rpx" />
-          <text class="primary-button__label">Save Preferences</text>
+          <text class="primary-button__label">保存设置</text>
         </view>
       </view>
     </scroll-view>

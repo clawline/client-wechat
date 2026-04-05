@@ -7,7 +7,7 @@
         </view>
       </view>
       <view class="screen-header__center">
-        <text class="screen-header__title">Connect Server</text>
+        <text class="screen-header__title">连接服务器</text>
       </view>
       <view class="nav-side-slot nav-side-slot--end" style="width: {{navSideSlotWidth}}px;"></view>
     </view>
@@ -17,10 +17,10 @@
         <view class="pairing-hero">
           <view class="pairing-chip">
             <oc-icon name="server" tone="green" size="28rpx" />
-            <text>OpenClaw Connect</text>
+            <text>OpenClaw 连接</text>
           </view>
-          <text class="screen-title">Connect Workspace</text>
-          <text class="pairing-copy">Paste a URL, scan QR code, or configure manually</text>
+          <text class="screen-title">连接工作区</text>
+          <text class="pairing-copy">粘贴 URL、扫描二维码或手动配置</text>
         </view>
 
         <!-- Tab selector -->
@@ -31,11 +31,11 @@
           </view>
           <view class="pairing-tab {{activeTab === 'qr' ? 'pairing-tab--active' : ''}}" data-tab="qr" bindtap="handleTabChange">
             <oc-icon name="search" tone="{{activeTab === 'qr' ? 'white' : 'dark'}}" size="26rpx" />
-            <text>Scan</text>
+            <text>扫码</text>
           </view>
           <view class="pairing-tab {{activeTab === 'manual' ? 'pairing-tab--active' : ''}}" data-tab="manual" bindtap="handleTabChange">
             <oc-icon name="settings" tone="{{activeTab === 'manual' ? 'white' : 'dark'}}" size="26rpx" />
-            <text>Manual</text>
+            <text>手动</text>
           </view>
         </view>
 
@@ -45,7 +45,7 @@
         <!-- URL Tab -->
         <view wx:if="{{activeTab === 'url'}}" class="form-card">
           <view class="form-field">
-            <text class="form-label">Connection URL</text>
+            <text class="form-label">连接地址</text>
             <view class="form-input-group">
               <input
                 class="form-input form-input--with-action"
@@ -59,10 +59,10 @@
               </view>
             </view>
           </view>
-          <text class="pairing-url-hint">Supports: ws:// / wss:// with query params, or openclaw://connect?serverUrl=...&token=...</text>
+          <text class="pairing-url-hint">支持 ws:// / wss:// 带参数，或 openclaw://connect 协议</text>
 
           <view class="primary-button primary-button--save" bindtap="handleUrlLogin" hover-class="button-pressed">
-            <text class="primary-button__label">Connect</text>
+            <text class="primary-button__label">连接</text>
             <oc-icon name="arrow-right" tone="white" size="32rpx" />
           </view>
         </view>
@@ -71,22 +71,22 @@
         <view wx:elif="{{activeTab === 'qr'}}" class="form-card pairing-qr-card">
           <view class="pairing-qr-hero">
             <oc-icon name="search" tone="dark" size="80rpx" />
-            <text class="pairing-qr-desc">Scan a server QR code to connect instantly</text>
+            <text class="pairing-qr-desc">扫描服务器二维码，快速连接</text>
           </view>
           <view class="primary-button primary-button--save" bindtap="handleScanQR" hover-class="button-pressed">
-            <text class="primary-button__label">Open Scanner</text>
+            <text class="primary-button__label">打开扫码</text>
           </view>
         </view>
 
         <!-- Manual Tab -->
         <view wx:elif="{{activeTab === 'manual'}}" class="form-card">
           <view class="form-field">
-            <text class="form-label">Display Name</text>
+            <text class="form-label">显示名称</text>
             <input class="form-input" value="{{preferenceForm.displayName}}" data-field="displayName" bindinput="handleInput" />
           </view>
 
           <view class="form-field">
-            <text class="form-label">Generic Channel WS URL</text>
+            <text class="form-label">通道 WS 地址</text>
             <input
               class="form-input"
               value="{{preferenceForm.genericChannelUrl}}"
@@ -98,7 +98,7 @@
           </view>
 
           <view class="form-field">
-            <text class="form-label">Auth Token <text class="form-label--hint">(optional)</text></text>
+            <text class="form-label">认证令牌 <text class="form-label--hint">（可选）</text></text>
             <input
               class="form-input"
               value="{{preferenceForm.token}}"
@@ -110,7 +110,7 @@
           </view>
 
           <view class="form-field">
-            <text class="form-label">Chat ID <text class="form-label--hint">(token auth: must match binding)</text></text>
+            <text class="form-label">会话 ID <text class="form-label--hint">（需与令牌绑定一致）</text></text>
             <input
               class="form-input"
               value="{{preferenceForm.chatId}}"
@@ -122,7 +122,7 @@
           </view>
 
           <view class="form-field">
-            <text class="form-label">Sender ID <text class="form-label--hint">(token auth: must match binding)</text></text>
+            <text class="form-label">发送者 ID <text class="form-label--hint">（需与令牌绑定一致）</text></text>
             <input
               class="form-input"
               value="{{preferenceForm.senderId}}"
@@ -134,7 +134,7 @@
           </view>
 
           <view class="primary-button primary-button--save" bindtap="handlePairConnection" hover-class="button-pressed">
-            <text class="primary-button__label">Pair and Continue</text>
+            <text class="primary-button__label">配对并继续</text>
             <oc-icon name="arrow-right" tone="white" size="32rpx" />
           </view>
         </view>
