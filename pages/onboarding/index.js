@@ -40,6 +40,10 @@ Page({
     this._startAutoPlay();
   },
 
+  onHide() {
+    this._stopAutoPlay();
+  },
+
   onUnload() {
     this._stopAutoPlay();
   },

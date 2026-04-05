@@ -78,6 +78,42 @@ function friendlyName(hostname) {
   }).join(' ');
 }
 
+/**
+ * Derive a server label from a parsed connection URL.
+ * Priority: channelName > hostname-based friendly name.
+ */
+function resolveServerLabel(parsed) {
+  if (parsed.channelName) return parsed.channelName;
+  var hostname = '';
+  try {
+    var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
+    hostname = match ? match[1] : 'Server';
+  } catch (e) { hostname = 'Server'; }
+  return friendlyName(hostname);
+}
+
+/**
+ * Save a parsed connection and navigate to chats.
+ * Shared by URL login, QR scan, and manual pairing flows.
+ *
+ * Server label (channelName / hostname) is used for the connection name.
+ * User display name (displayName param) is stored separately so a server
+ * label never overwrites the user's sender identity.
+ */
+function activateParsedConnection(parsed) {
+  var serverLabel = resolveServerLabel(parsed);
+  var userDisplayName = parsed.displayName || serverLabel;
+  saveConnectionState({
+    displayName: userDisplayName,
+    serverUrl: parsed.serverUrl,
+    isPaired: true,
+  });
+  var conn = addServerConnection(serverLabel, parsed.serverUrl, userDisplayName, parsed.token, parsed.chatId, parsed.senderId);
+  setActiveConnectionId(conn.id);
+  wx.showToast({ title: 'Server connected!', icon: 'none' });
+  navigateToScreen('chats');
+}
+
 Page({
   data: {
     ...DEFAULT_PAGE_CHROME,
@@ -121,25 +157,7 @@ Page({
       this.setData({ urlError: 'Invalid URL. Use ws:// or openclaw:// format.' });
       return;
     }
-    // Priority: channelName > displayName > friendly hostname
-    var hostname = '';
-    try {
-      var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
-      hostname = match ? match[1] : 'Server';
-    } catch (e) { hostname = 'Server'; }
-    var connName = parsed.channelName || parsed.displayName || friendlyName(hostname);
-
-    saveConnectionState({
-      displayName: connName,
-      serverUrl: parsed.serverUrl,
-      isPaired: true,
-    });
-
-    var conn = addServerConnection(connName, parsed.serverUrl, connName, parsed.token, parsed.chatId, parsed.senderId);
-    setActiveConnectionId(conn.id);
-
-    wx.showToast({ title: 'Server connected!', icon: 'none' });
-    navigateToScreen('chats');
+    activateParsedConnection(parsed);
   },
 
   handlePasteUrl() {
@@ -160,24 +178,7 @@ Page({
         var value = res.result || '';
         var parsed = parseConnectionUrl(value);
         if (parsed && parsed.serverUrl) {
-          var hostname = '';
-          try {
-            var match = parsed.serverUrl.match(/\/\/([^/:]+)/);
-            hostname = match ? match[1] : 'Server';
-          } catch (e) { hostname = 'Server'; }
-          var connName = parsed.channelName || parsed.displayName || friendlyName(hostname);
-
-          saveConnectionState({
-            displayName: connName,
-            serverUrl: parsed.serverUrl,
-            isPaired: true,
-          });
-
-          var conn = addServerConnection(connName, parsed.serverUrl, connName, parsed.token, parsed.chatId, parsed.senderId);
-          setActiveConnectionId(conn.id);
-
-          wx.showToast({ title: 'Server connected!', icon: 'none' });
-          navigateToScreen('chats');
+          activateParsedConnection(parsed);
         } else {
           // Put scanned text into URL input for manual review
           this.setData({
@@ -223,22 +224,19 @@ Page({
       return;
     }
 
-    saveConnectionState({
-      displayName,
+    activateParsedConnection({
       serverUrl,
-      isPaired: true,
+      token,
+      chatId,
+      senderId,
+      channelName: displayName,
+      displayName: displayName,
     });
-
-    const conn = addServerConnection(displayName, serverUrl, displayName, token, chatId, senderId);
-    setActiveConnectionId(conn.id);
 
     updatePreferenceForm({
       ...this.data.preferenceForm,
       displayName,
       genericChannelUrl: serverUrl,
     });
-
-    wx.showToast({ title: 'Server connected!', icon: 'none' });
-    navigateToScreen('chats');
   },
 });
